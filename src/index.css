@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; }
+  body { @apply bg-gray-50 text-gray-900 font-sans; }
+  :focus-visible { outline: 2px solid #3370ff; outline-offset: 2px; }
+  ::selection { background: #bcd6ff; color: #111f5c; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-200 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-gray-300; }
+}
+
+@layer components {
+  .anim-fade { animation: fadeIn 0.2s ease-out; }
+  .anim-scale { animation: scaleIn 0.18s ease-out; }
+  .anim-up { animation: slideUp 0.22s ease-out; }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    @apply bg-gray-100 rounded-lg;
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+  }
+
+  /* Sidebar nav active */
+  .nav-active { @apply bg-brand-600/15 text-brand-400; }
+  .nav-item { @apply flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all text-gray-400 hover:text-gray-100 hover:bg-white/5; }
+
+  /* Table */
+  .table-th { @apply px-4 py-3 text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider; }
+  .table-td { @apply px-4 py-3 text-sm text-gray-700 whitespace-nowrap; }
+
+  /* Card */
+  .card { @apply bg-white border border-gray-200 rounded-xl shadow-card; }
+  .card-header { @apply px-5 py-4 border-b border-gray-100 flex items-center justify-between; }
+
+  /* Form */
+  .field-label { @apply block text-xs font-medium text-gray-600 mb-1.5; }
+  .field-input { @apply w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all placeholder:text-gray-400 disabled:bg-gray-50 disabled:text-gray-400; }
+}
+
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes scaleIn { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
+@keyframes slideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }

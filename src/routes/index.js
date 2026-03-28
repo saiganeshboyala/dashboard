@@ -1,0 +1,5 @@
+export { HEAD_SECTIONS, HeadRoutes } from './headRoutes'
+export { BU_SECTIONS,  BURoutes   } from './buRoutes'
+export { REC_SECTIONS, RecRoutes  } from './recRoutes'
+export { STU_SECTIONS, StuRoutes  } from './stuRoutes'
+export { AdminRoutes               } from './adminRoutes'

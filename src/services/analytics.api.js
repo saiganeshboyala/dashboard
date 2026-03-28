@@ -1,0 +1,33 @@
+import { get, post } from './api'
+
+const wrap = (key, fallback = []) => r => ({ [key]: Array.isArray(r) ? r : r?.[key] || r?.data || fallback, total: r?.total || 0 })
+
+export const getOverview           = ()     => get('/api/v1/analytics/overview')
+export const getBUComparison       = ()     => get('/api/v1/analytics/bu-comparison')
+export const getLeaderboard        = ()     => get('/api/v1/analytics/recruiter-leaderboard')
+export const getPipeline           = ()     => get('/api/v1/analytics/pipeline')
+export const getTechDemand         = ()     => get('/api/v1/analytics/technology-demand')
+export const getSubmissionTrends   = (d=30) => get(`/api/v1/analytics/submission-trends?days=${d}`)
+export const getDailyReport        = ()     => get('/api/v1/analytics/daily-report')
+export const getConversionFunnel   = ()     => get('/api/v1/analytics/conversion-funnel')
+export const getVendorPerformance  = ()     => get('/api/v1/analytics/vendor-performance')
+export const getStudentAging       = ()     => get('/api/v1/analytics/student-aging')
+export const getRevenue            = ()     => get('/api/v1/analytics/revenue')
+export const getTechPerformance    = ()     => get('/api/v1/analytics/tech-performance')
+export const getRecruiterComparison= ()     => get('/api/v1/analytics/recruiter-comparison')
+export const getStudentStatus      = ()     => get('/api/v1/analytics/student-status').then(wrap('statuses'))
+export const getTopStudents        = ()     => get('/api/v1/analytics/top-students').then(wrap('students'))
+export const getActivityFeed       = ()     => get('/api/v1/analytics/activity-feed').then(wrap('feed'))
+export const getUpcomingInterviews = ()     => get('/api/v1/analytics/upcoming-interviews').then(wrap('interviews'))
+
+// AI Agents
+export const getPlacementPrediction = (sid) => post('/api/v1/agents/placement', { studentId: sid })
+export const getPlacementBatch      = (ids) => post('/api/v1/agents/placement-batch', { studentIds: ids }).catch(() => ({ results: [] }))
+export const getSkillGap            = (sid) => post('/api/v1/agents/skill-gap', { studentId: sid })
+export const getRecruiterPerfAI     = ()    => post('/api/v1/agents/recruiter-perf', {})
+export const getVendorIntelAI       = ()    => post('/api/v1/agents/vendor-intel', {})
+export const getResumeAnalysis      = (d)   => post('/api/v1/agents/resume', d)
+export const getJobIntel            = (d)   => post('/api/v1/agents/job-intel', d)
+export const getStudentPerfAI       = (d)   => post('/api/v1/agents/student-performance', d)
+export const getDailyAnalyticsAI    = ()    => post('/api/v1/agents/daily-analytics', {})
+export const aiQuery                = (d)   => post('/api/v1/platform/ai-query', d)
