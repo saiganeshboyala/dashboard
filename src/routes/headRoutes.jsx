@@ -39,9 +39,10 @@ const IntegrationsPage    = lazy(() => import('../pages/head/IntegrationsPage'))
 const DynamicRecordPage   = lazy(() => import('../pages/head/DynamicRecordPage'))
 const DynamicListPage     = lazy(() => import('../pages/head/DynamicListPage'))
 const ProfilesPage        = lazy(() => import('../pages/head/ProfilesPage'))
+const ChangePasswordPage  = lazy(() => import('../pages/head/ChangePasswordPage'))
 const InvitePage          = lazy(() => import('../pages/head/InvitePage'))
 const BulkEmailPage       = lazy(() => import('../pages/head/BulkEmailPage'))
-
+const CustomizePage       = lazy(() => import('../pages/head/customize/CustomizePage'))
 // Setup pages
 const SetupHomePage       = lazy(() => import('../pages/head/setup/SetupHomePage'))
 const ObjectManagerPage   = lazy(() => import('../pages/head/setup/ObjectManagerPage'))
@@ -55,7 +56,7 @@ export const HEAD_SECTIONS = [
     { to: '/head',           label: 'Dashboard',  icon: 'dashboard' },
     { to: '/head/analytics', label: 'Analytics',  icon: 'chart' },
   ]},
-  { section: 'CRM',        items: [
+  { section: 'CRM', items: [      // populated dynamically from /api/v1/dynamic/config; these are fallbacks
     { to: '/head/students',    label: 'Students',       icon: 'users' },
     { to: '/head/submissions', label: 'Submissions',    icon: 'file' },
     { to: '/head/interviews',  label: 'Interviews',     icon: 'calendar' },
@@ -94,6 +95,7 @@ export const HEAD_SECTIONS = [
     { to: '/head/lms',             label: 'LMS Admin',       icon: 'student' },
   ]},
   { section: 'Settings',   items: [
+    { to: '/head/customize',  label: 'Customize',             icon: 'settings' },
     { to: '/head/setup',      label: 'Setup',                 icon: 'settings' },
     { to: '/head/invite',     label: 'Invite Users',          icon: 'recruiter' },
     { to: '/head/schema',     label: 'Schema Admin',          icon: 'dashboard' },
@@ -103,17 +105,7 @@ export const HEAD_SECTIONS = [
     { to: '/head/settings',   label: 'Settings',              icon: 'dashboard' },
     { to: '/head/billing',    label: 'Billing',               icon: 'briefcase' },
   ]},
-  { section: 'Objects',    items: [
-    { to: '/head/dynamic/students',       label: 'Students',       icon: 'users' },
-    { to: '/head/dynamic/submissions',    label: 'Submissions',    icon: 'file' },
-    { to: '/head/dynamic/interviews',     label: 'Interviews',     icon: 'calendar' },
-    { to: '/head/dynamic/business_units', label: 'Business Units', icon: 'building' },
-    { to: '/head/dynamic/recruiters',     label: 'Recruiters',     icon: 'recruiter' },
-    { to: '/head/dynamic/clusters',       label: 'Clusters',       icon: 'users' },
-    { to: '/head/dynamic/placements',     label: 'Placements',     icon: 'briefcase' },
-    { to: '/head/dynamic/leads',          label: 'Leads',          icon: 'users' },
-    { to: '/head/dynamic/cases',          label: 'Cases',          icon: 'file' },
-  ]},
+  { section: 'Objects', collapsible: true, items: [] },  // populated dynamically, collapsed by default
 ]
 
 export const HeadRoutes = (
@@ -176,10 +168,14 @@ export const HeadRoutes = (
       <Route path="/head/integrations"    element={<IntegrationsPage />} />
       <Route path="/head/lms"             element={<LMSAdminPage />} />
 
+      {/* Customize (Visual Builder) */}
+      <Route path="/head/customize"  element={<CustomizePage />} />
+
       {/* Settings */}
       <Route path="/head/invite"     element={<InvitePage />} />
       <Route path="/head/schema"     element={<SchemaAdminPage />} />
-      <Route path="/head/profiles"   element={<ProfilesPage />} />
+      <Route path="/head/profiles"         element={<ProfilesPage />} />
+      <Route path="/head/change-password"  element={<ChangePasswordPage />} />
       <Route path="/head/automation" element={<AutomationPage />} />
       <Route path="/head/mfa"        element={<MFAPage />} />
       <Route path="/head/settings"   element={<SettingsPage />} />

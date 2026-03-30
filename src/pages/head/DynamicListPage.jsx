@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Page, DataTable, Badge, Loading, Button } from '../../components/Shared'
 import { get } from '../../utils/api'
+import { usePermissions } from '../../hooks/usePermissions'
 
 const OBJECT_ICONS = {
-  students: '👤', submissions: '📄', interviews: '📅', business_units: '🏢',
-  recruiters: '👥', clusters: '🌐', placements: '💼', leads: '🎯',
-  cases: '📋', campaigns: '📣', expenses: '💰',
+  students: '', submissions: '', interviews: '', business_units: '',
+  recruiters: '', clusters: '', placements: '', leads: '',
+  cases: '', campaigns: '', expenses: '',
 }
 
 const PAGE_SIZE = 50
@@ -15,6 +16,7 @@ export default function DynamicListPage() {
   const { objectName } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { perms } = usePermissions(objectName)
 
   const [records, setRecords] = useState([])
   const [total, setTotal] = useState(0)
@@ -89,7 +91,7 @@ export default function DynamicListPage() {
     : []
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
-  const icon = OBJECT_ICONS[objectName] || '📦'
+  const icon = OBJECT_ICONS[objectName] ?? ''
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -105,10 +107,12 @@ export default function DynamicListPage() {
 
   return (
     <Page
-      title={`${icon} ${objectLabel}`}
+      title={objectLabel}
       subtitle={`${total.toLocaleString()} record${total !== 1 ? 's' : ''}`}
       actions={
-        <Button onClick={() => navigate(`/head/dynamic/${objectName}/new`)}>+ New Record</Button>
+        perms?.canCreate !== false && (
+          <Button onClick={() => navigate(`/head/dynamic/${objectName}/new`)}>+ New Record</Button>
+        )
       }
     >
       {/* Search bar */}
@@ -137,7 +141,7 @@ export default function DynamicListPage() {
       {/* Table */}
       {loading ? <Loading /> : records.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-xl p-12 text-center shadow-card">
-          <div className="text-4xl mb-4">{icon}</div>
+          <div className="mb-4"></div>
           <p className="text-gray-400 text-[13px]">
             No {objectLabel.toLowerCase()} found{search ? ` matching "${search}"` : ''}
           </p>

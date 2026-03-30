@@ -154,13 +154,18 @@ export function ClickableBarChart({ data, dataKey, nameKey = 'name', drillDown, 
 
   const handleClick = (entry) => {
     if (!drillDown || !entry) return;
-    const value = entry[nameKey] || entry.name;
+    const label    = entry[nameKey] || entry.name;
+    const paramKey = drillDown.paramKey || drillDown.field;
+    // When using a shortcut endpoint prefer the record's numeric id over the display label
+    const value    = drillDown.endpoint
+      ? (entry.id ?? entry[drillDown.field] ?? label)
+      : (entry[drillDown.field] ?? label);
     setDrill({
-      title: `${title || 'Records'}: ${value}`,
+      title: `${title || 'Records'}: ${label}`,
       object: drillDown.object,
       field: drillDown.field,
       value,
-      endpoint: drillDown.endpoint ? `${drillDown.endpoint}?${drillDown.field}=${encodeURIComponent(value)}` : null,
+      endpoint: drillDown.endpoint ? `${drillDown.endpoint}?${paramKey}=${encodeURIComponent(value)}` : null,
     });
   };
 
@@ -214,13 +219,17 @@ export function ClickablePieChart({ data, dataKey = 'count', nameKey = 'name', d
 
   const handleClick = (entry) => {
     if (!drillDown || !entry) return;
-    const value = entry[nameKey] || entry.name;
+    const label    = entry[nameKey] || entry.name;
+    const paramKey = drillDown.paramKey || drillDown.field;
+    const value    = drillDown.endpoint
+      ? (entry.id ?? entry[drillDown.field] ?? label)
+      : (entry[drillDown.field] ?? label);
     setDrill({
-      title: `${title || 'Records'}: ${value}`,
+      title: `${title || 'Records'}: ${label}`,
       object: drillDown.object,
       field: drillDown.field,
       value,
-      endpoint: drillDown.endpoint ? `${drillDown.endpoint}?${drillDown.field}=${encodeURIComponent(value)}` : null,
+      endpoint: drillDown.endpoint ? `${drillDown.endpoint}?${paramKey}=${encodeURIComponent(value)}` : null,
     });
   };
 

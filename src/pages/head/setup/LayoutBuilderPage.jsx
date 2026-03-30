@@ -318,7 +318,15 @@ function SectionCard({
         isOverSection ? 'border-indigo-400' : 'border-gray-200'
       }`}
       onDragOver={e => { e.preventDefault(); if (overTarget?.fieldIdx === undefined) onDragOverSection(sectionIdx) }}
-      onDrop={e => { e.preventDefault(); onDropSection(sectionIdx) }}
+      onDrop={e => {
+        e.preventDefault()
+        if (dragState?.source === 'panel') {
+          // Dropping from field palette onto section → append to end
+          onDropSlot(sectionIdx, section.fields.length)
+        } else {
+          onDropSection(sectionIdx)
+        }
+      }}
     >
       {/* Section header */}
       <div
@@ -381,26 +389,40 @@ function SectionCard({
               />
             </div>
           ) : (
-            section.fields.map((fn, fieldIdx) => {
-              const field = fieldMap[fn]
-              const isOver = overTarget?.sectionIdx === sectionIdx && overTarget?.fieldIdx === fieldIdx
-              return (
-                <FieldSlot
-                  key={fn}
-                  fieldName={fn}
-                  label={field?.label || fn}
-                  fieldType={field?.fieldType || field?.field_type}
-                  isRequired={field?.isRequired || field?.is_required}
-                  sectionIdx={sectionIdx}
-                  fieldIdx={fieldIdx}
-                  onDragStart={onDragStartField}
-                  onDragOver={onDragOverSlot}
-                  onDrop={onDropSlot}
-                  onRemove={onRemoveField}
-                  isOver={isOver}
-                />
-              )
-            })
+            <>
+              {section.fields.map((fn, fieldIdx) => {
+                const field = fieldMap[fn]
+                const isOver = overTarget?.sectionIdx === sectionIdx && overTarget?.fieldIdx === fieldIdx
+                return (
+                  <FieldSlot
+                    key={fn}
+                    fieldName={fn}
+                    label={field?.label || fn}
+                    fieldType={field?.fieldType || field?.field_type}
+                    isRequired={field?.isRequired || field?.is_required}
+                    sectionIdx={sectionIdx}
+                    fieldIdx={fieldIdx}
+                    onDragStart={onDragStartField}
+                    onDragOver={onDragOverSlot}
+                    onDrop={onDropSlot}
+                    onRemove={onRemoveField}
+                    isOver={isOver}
+                  />
+                )
+              })}
+              {/* Append drop zone — always visible so users can drop more fields */}
+              <div
+                className={`col-span-full border border-dashed rounded-lg py-2 text-center text-[11px] transition-colors ${
+                  overTarget?.sectionIdx === sectionIdx && overTarget?.fieldIdx === section.fields.length
+                    ? 'border-indigo-400 bg-indigo-50 text-indigo-500'
+                    : 'border-gray-200 text-gray-300 hover:border-gray-300'
+                }`}
+                onDragOver={e => { e.preventDefault(); onDragOverSlot(sectionIdx, section.fields.length) }}
+                onDrop={e => { e.preventDefault(); onDropSlot(sectionIdx, section.fields.length) }}
+              >
+                + drop field here
+              </div>
+            </>
           )}
         </div>
       )}
@@ -455,7 +477,17 @@ export default function LayoutBuilderPage() {
           const parsed = typeof sec === 'string' ? JSON.parse(sec) : sec
           const arr = Array.isArray(parsed) ? parsed : (parsed?.sections || [])
           _sectionId = arr.length
-          setSections(arr.map((s, i) => ({ ...s, _id: i + 1 })))
+          // Deduplicate field names globally — a field can only appear in one section
+          const seen = new Set()
+          setSections(arr.map((s, i) => ({
+            ...s,
+            _id: i + 1,
+            fields: (s.fields || []).filter(fn => {
+              if (seen.has(fn)) return false
+              seen.add(fn)
+              return true
+            }),
+          })))
         } else {
           _sectionId = 0
           setSections([

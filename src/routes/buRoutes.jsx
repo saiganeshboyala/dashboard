@@ -33,8 +33,9 @@ export const BURoutes = (
       <Route path="/bu/recruiters"      element={<DynamicList objectName="recruiters"    basePath="/bu/recruiters" />} />
       <Route path="/bu/recruiters/:id"  element={<DynamicDetail objectName="recruiters"  basePath="/bu/recruiters" />} />
 
-      {/* Generic dynamic detail — used by NotificationBell links and related-list clicks */}
-      <Route path="/bu/dynamic/:objectName/:id" element={<DynamicDetail basePath="/bu" />} />
+      {/* Generic dynamic list + detail — config-driven sidebar links and related-list clicks */}
+      <Route path="/bu/dynamic/:objectName"     element={<DynamicList   basePath="/bu/dynamic" />} />
+      <Route path="/bu/dynamic/:objectName/:id" element={<DynamicDetail basePath="/bu/dynamic" />} />
 
       {/* Legacy record route */}
       <Route path="/bu/records/:type/:id" element={<RecordDetail objectType="" basePath="/bu" />} />

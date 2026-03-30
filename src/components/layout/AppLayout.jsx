@@ -1,12 +1,14 @@
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useMemo } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { Menu } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import OfflineBanner from './OfflineBanner'
 import GlobalSearch from '../GlobalSearch'
+import SessionTimeoutModal from './SessionTimeoutModal'
 import { getToken, getUser, getHomePath } from '../../utils/auth'
 import { Loading } from '../ui/Loading'
+import { useAppConfig } from '../../context/AppConfigContext'
 
 /**
  * Shared authenticated layout — wraps HEAD / BU / REC / STU sections.
@@ -19,6 +21,26 @@ import { Loading } from '../ui/Loading'
  */
 export default function AppLayout({ sections, basePath = '/head', allowedRoles }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { config } = useAppConfig()
+
+  // Merge static sections with dynamic objects from config.
+  // If there is a section named "Objects", replace its items with config-driven items.
+  // Must be before early returns to satisfy Rules of Hooks.
+  const effectiveSections = useMemo(() => {
+    if (!config?.objects?.length) return sections
+
+    const dynamicItems = config.objects.map(obj => ({
+      to:    `${basePath}/dynamic/${obj.name}`,
+      label: obj.pluralLabel || obj.label,
+      icon:  obj.icon || 'users',
+    }))
+
+    return sections.map(s => {
+      if (s.section === 'CRM')     return { ...s, items: dynamicItems }
+      if (s.section === 'Objects') return { ...s, items: dynamicItems }
+      return s
+    })
+  }, [sections, config, basePath])
 
   const token = getToken()
   if (!token) return <Navigate to="/login" replace />
@@ -31,9 +53,10 @@ export default function AppLayout({ sections, basePath = '/head', allowedRoles }
   return (
     <>
       <OfflineBanner />
+      <SessionTimeoutModal />
 
       <Sidebar
-        sections={sections}
+        sections={effectiveSections}
         searchSlot={<GlobalSearch basePath={basePath} />}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

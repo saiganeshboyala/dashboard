@@ -399,5 +399,8 @@ export const getPermSetObjectPerms    = (id)     => request(`/api/v1/profiles/pe
 export const setPermSetObjectPerm     = (id, d)  => request(`/api/v1/profiles/permission-sets/${id}/objects`, { method: 'POST', body: JSON.stringify(d) })
 export const getAvailableObjects      = ()       => request('/api/v1/profiles/meta/objects')
 export const getAvailableTabs         = ()       => request('/api/v1/profiles/meta/tabs')
+export const searchProfileUsers       = (q)      => request(`/api/v1/profiles/users/search?q=${encodeURIComponent(q)}`)
+export const addUsersToProfile        = (id, userIds) => request(`/api/v1/profiles/${id}/users`, { method: 'POST', body: JSON.stringify({ userIds }) })
+export const removeUserFromProfile    = (id, userId)  => request(`/api/v1/profiles/${id}/users/${userId}`, { method: 'DELETE' })
 
 export default { get, post, put, delete: del }

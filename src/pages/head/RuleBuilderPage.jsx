@@ -356,7 +356,7 @@ function RuleEditorModal({ mode: initialMode, existingRule, onClose, onSaved }) 
               color: mode === 'simple' ? '#fff' : '#374151',
             }}
           >
-            🖱️ Simple (Clicks)
+            Simple (Clicks)
           </button>
           <button
             onClick={() => setMode('formula')}
@@ -366,7 +366,7 @@ function RuleEditorModal({ mode: initialMode, existingRule, onClose, onSaved }) 
               color: mode === 'formula' ? '#fff' : '#374151',
             }}
           >
-            💻 Advanced (Formula)
+            Advanced (Formula)
           </button>
         </div>
 
@@ -598,7 +598,7 @@ function TestRuleModal({ rule, onClose }) {
 function EmptyState({ onCreateSimple }) {
   return (
     <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+      <div style={{ marginBottom: 16 }}></div>
       <h3 style={{ margin: '0 0 8px', color: '#1e293b' }}>No Validation Rules Yet</h3>
       <p style={{ margin: '0 0 20px' }}>Create rules to enforce data quality — like Salesforce, but simpler.</p>
       <Button onClick={onCreateSimple}>+ Create Your First Rule</Button>

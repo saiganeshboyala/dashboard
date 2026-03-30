@@ -421,7 +421,7 @@ export default function HeadDashboard() {
                     data={bus}
                     dataKey="placements"
                     nameKey="name"
-                    drillDown={{ object: 'students', field: 'bu_id', endpoint: '/api/v1/analytics/drill-down/bu' }}
+                    drillDown={{ object: 'students', field: 'bu_id', paramKey: 'buId', endpoint: '/api/v1/analytics/drill-down/bu' }}
                     title="Students in BU"
                     color="#22c55e"
                     height={140}

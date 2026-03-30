@@ -155,8 +155,8 @@ export default function LivePreview({ objectName, sections, fields }) {
                     </h3>
                   </div>
                   <div className={`p-4 grid gap-x-6 gap-y-4 ${section.columns === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                    {sectionFields.map(field => (
-                      <div key={field.field_name} className="space-y-1 min-w-0">
+                    {sectionFields.map((field, fi) => (
+                      <div key={`${i}-${fi}-${field.field_name}`} className="space-y-1 min-w-0">
                         <label className="block text-[11px] font-medium text-gray-500 truncate">
                           {field.label}
                           {field.is_required && <span className="text-red-400 ml-0.5">*</span>}

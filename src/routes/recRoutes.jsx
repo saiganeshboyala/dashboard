@@ -13,11 +13,13 @@ export const REC_SECTIONS = [
     { to: '/rec', label: 'Dashboard', icon: 'dashboard' },
   ]},
   { section: 'CRM', items: [
-    { to: '/rec/students',       label: 'My Students',    icon: 'users' },
-    { to: '/rec/submissions',    label: 'Submissions',    icon: 'file' },
-    { to: '/rec/interviews',     label: 'Interviews',     icon: 'calendar' },
-    { to: '/rec/submit',         label: 'Add Submission', icon: 'file' },
-    { to: '/rec/add-interview',  label: 'Add Interview',  icon: 'calendar' },
+    { to: '/rec/students',    label: 'My Students', icon: 'users' },
+    { to: '/rec/submissions', label: 'Submissions', icon: 'file' },
+    { to: '/rec/interviews',  label: 'Interviews',  icon: 'calendar' },
+  ]},
+  { section: 'Actions', items: [
+    { to: '/rec/submit',        label: 'Add Submission', icon: 'file' },
+    { to: '/rec/add-interview', label: 'Add Interview',  icon: 'calendar' },
   ]},
 ]
 
@@ -38,8 +40,9 @@ export const RecRoutes = (
       <Route path="/rec/submit"        element={<AddSubmissionPage />} />
       <Route path="/rec/add-interview" element={<AddInterviewPage />} />
 
-      {/* Generic dynamic detail — used by NotificationBell links and related-list clicks */}
-      <Route path="/rec/dynamic/:objectName/:id" element={<DynamicDetail basePath="/rec" />} />
+      {/* Generic dynamic list + detail — config-driven sidebar links and related-list clicks */}
+      <Route path="/rec/dynamic/:objectName"     element={<DynamicList   basePath="/rec/dynamic" />} />
+      <Route path="/rec/dynamic/:objectName/:id" element={<DynamicDetail basePath="/rec/dynamic" />} />
 
       {/* Legacy record route */}
       <Route path="/rec/records/:type/:id" element={<RecordDetail objectType="" basePath="/rec" />} />

@@ -46,7 +46,6 @@ export default function NotificationsPage() {
     placement: 'green', interview: 'blue', submission: 'purple',
     system: 'gray', warning: 'amber', alert: 'red',
   }
-  const typeIcons = { placement: '🎉', interview: '📅', submission: '📄', system: '⚙️', warning: '⚠️', alert: '🔔' }
 
   return (
     <Page
@@ -76,7 +75,7 @@ export default function NotificationsPage() {
           {
             key: 'type_icon', label: '', sortable: false,
             render: (_, r) => (
-              <span className="text-lg">{typeIcons[r.type] || '🔔'}</span>
+              <Bell size={14} className="text-gray-400" />
             ),
           },
           {

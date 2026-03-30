@@ -261,7 +261,7 @@ function PendingTab() {
   async function revoke(id) {
     setActing(id)
     try {
-      await api.del(`/api/v1/tenants/revoke-invite/${id}`)
+      await api.delete(`/api/v1/tenants/revoke-invite/${id}`)
       toast.success('Invite revoked')
       setRevokeId(null)
       await load()

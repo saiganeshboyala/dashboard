@@ -1,14 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastProvider, useToast } from './context/ToastContext'
+import { AppConfigProvider } from './context/AppConfigContext'
 import { setApiErrorHandler } from './utils/api'
 
 // Public pages
-import LoginPage        from './pages/public/LoginPage'
-import RegisterPage     from './pages/public/RegisterPage'
-import PricingPage      from './pages/public/PricingPage'
-import AccessDeniedPage from './pages/public/AccessDeniedPage'
-import SetPasswordPage  from './pages/public/SetPasswordPage'
+import LoginPage          from './pages/public/LoginPage'
+import RegisterPage       from './pages/public/RegisterPage'
+import PricingPage        from './pages/public/PricingPage'
+import AccessDeniedPage   from './pages/public/AccessDeniedPage'
+import SetPasswordPage    from './pages/public/SetPasswordPage'
+import ChangePasswordPage from './pages/head/ChangePasswordPage'
+
+// Setup wizard (lazy)
+const SetupWizard = lazy(() => import('./pages/setup/SetupWizard'))
 
 // Role-based route fragments
 import { HeadRoutes  } from './routes/headRoutes'
@@ -31,6 +36,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
+        <AppConfigProvider>
         <ApiErrorSetup />
         <Routes>
           {/* Public */}
@@ -38,8 +44,10 @@ export default function App() {
           <Route path="/register"      element={<RegisterPage />} />
           <Route path="/pricing"       element={<PricingPage />} />
           <Route path="/access-denied" element={<AccessDeniedPage />} />
-          <Route path="/set-password"  element={<SetPasswordPage />} />
+          <Route path="/set-password"    element={<SetPasswordPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/"              element={<Navigate to="/login" replace />} />
+          <Route path="/setup"         element={<Suspense fallback={null}><SetupWizard /></Suspense>} />
 
           {/* Role sections — each fragment owns its AppLayout + auth guard */}
           {AdminRoutes}
@@ -50,6 +58,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        </AppConfigProvider>
       </ToastProvider>
     </BrowserRouter>
   )

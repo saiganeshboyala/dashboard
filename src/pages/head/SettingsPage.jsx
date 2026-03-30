@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Page, Loading, Tabs, Button, Input, Select, DataTable, Badge, Modal, Alert } from '../../components/Shared'
 import { useToast } from '../../context/ToastContext'
-import { get, post } from '../../utils/api'
+import { get, post, del as apiDel } from '../../utils/api'
 import {
   getTenant, updateTenant, getDomainInfo, setCustomDomain, verifyDomain,
   getPasswordPolicy, updatePasswordPolicy, getIpRestrictions, getSSOProviders,
@@ -9,7 +9,7 @@ import {
   getPreferences, updatePreferences, getTenantUsers, inviteUser,
   getLoginHours, setLoginHours, updateBranding
 } from '../../utils/api'
-import { Save, Shield, Globe, Building2, Lock, Server, Mail, Sliders, Plus, Trash2, Users } from 'lucide-react'
+import { Save, Shield, Globe, Building2, Lock, Server, Mail, Sliders, Plus, Trash2, Users, LogOut, Monitor } from 'lucide-react'
 
 export default function SettingsPage() {
   const toast = useToast()
@@ -31,6 +31,9 @@ export default function SettingsPage() {
   const [smtpForm, setSmtpForm] = useState({})
   const [loginHours, setLoginHours] = useState([])
   const [branding, setBranding] = useState({})
+  const [loginHistory, setLoginHistory] = useState([])
+  const [sessions, setSessions] = useState([])
+  const [adminHistory, setAdminHistory] = useState([])
   const [tenantUsers, setTenantUsers] = useState([])
   const [showAddDelegate, setShowAddDelegate] = useState(false)
   const [delegateForm, setDelegateForm] = useState({})
@@ -43,10 +46,21 @@ export default function SettingsPage() {
       switch (t) {
         case 'company':     setTenant(await getTenant().catch(() => ({}))); break
         case 'domain':      setDomain(await getDomainInfo().catch(() => ({}))); break
-        case 'security':
-          const [pw, ip] = await Promise.all([getPasswordPolicy().catch(() => ({})), getIpRestrictions().catch(() => [])])
-          setPolicy(pw?.policy || pw || {}); setIpRules(ip?.restrictions || ip || [])
+        case 'security': {
+          const [pw, ip, hist, sess, adminHist] = await Promise.all([
+            getPasswordPolicy().catch(() => ({})),
+            getIpRestrictions().catch(() => []),
+            get('/api/v1/auth/login-history').catch(() => ({})),
+            get('/api/v1/auth/sessions').catch(() => ({})),
+            get('/api/v1/auth/admin/login-history').catch(() => ({})),
+          ])
+          setPolicy(pw?.policy || pw || {})
+          setIpRules(ip?.restrictions || ip || [])
+          setLoginHistory(hist?.loginHistory || [])
+          setSessions(sess?.sessions || [])
+          setAdminHistory(adminHist?.loginHistory || [])
           break
+        }
         case 'sso':         setSsoProviders((await getSSOProviders().catch(() => ({})))?.providers || []); break
         case 'delegated':   setDelegated((await getDelegatedAdmins().catch(() => ({})))?.grants || []); break
         case 'storage':     setStorage(await getStorage().catch(() => null)); break
@@ -133,27 +147,85 @@ export default function SettingsPage() {
 
             {/* ── SECURITY ── */}
             {tab === 'security' && (
-              <div className="space-y-5 max-w-2xl">
+              <div className="space-y-5 max-w-3xl">
+                {/* Password Policy */}
                 <div className="card p-6 space-y-4">
                   <h3 className="text-[13px] font-bold">Password Policy</h3>
                   <div className="grid grid-cols-3 gap-4">
                     <Input label="Min Length" type="number" value={policy.min_length ?? 8} onChange={e => setPolicy(p => ({ ...p, min_length: +e.target.value }))} />
-                    <Input label="Expire Days (0=never)" type="number" value={policy.max_age_days ?? 0} onChange={e => setPolicy(p => ({ ...p, max_age_days: +e.target.value }))} />
-                    <Input label="Password History" type="number" value={policy.password_history ?? 0} onChange={e => setPolicy(p => ({ ...p, password_history: +e.target.value }))} />
-                    <Input label="Max Login Attempts" type="number" value={policy.max_login_attempts ?? 5} onChange={e => setPolicy(p => ({ ...p, max_login_attempts: +e.target.value }))} />
-                    <Input label="Lockout (min)" type="number" value={policy.lockout_duration_minutes ?? 15} onChange={e => setPolicy(p => ({ ...p, lockout_duration_minutes: +e.target.value }))} />
+                    <Input label="Expire Days (0=never)" type="number" value={policy.password_expiry_days ?? policy.max_age_days ?? 0} onChange={e => setPolicy(p => ({ ...p, password_expiry_days: +e.target.value }))} />
+                    <Input label="Password History" type="number" value={policy.history_count ?? policy.password_history ?? 0} onChange={e => setPolicy(p => ({ ...p, history_count: +e.target.value }))} />
+                    <Input label="Max Failed Attempts" type="number" value={policy.max_failed_attempts ?? policy.max_login_attempts ?? 5} onChange={e => setPolicy(p => ({ ...p, max_failed_attempts: +e.target.value }))} />
+                    <Input label="Lockout (min)" type="number" value={policy.lockout_duration_mins ?? policy.lockout_duration_minutes ?? 30} onChange={e => setPolicy(p => ({ ...p, lockout_duration_mins: +e.target.value }))} />
                     <Input label="Session Timeout (min)" type="number" value={policy.session_timeout_minutes ?? 480} onChange={e => setPolicy(p => ({ ...p, session_timeout_minutes: +e.target.value }))} />
                   </div>
                   <div className="flex flex-wrap gap-5">
-                    {['require_uppercase', 'require_lowercase', 'require_number', 'require_special'].map(k => (
+                    {[
+                      ['require_uppercase', 'Require Uppercase'],
+                      ['require_lowercase', 'Require Lowercase'],
+                      ['require_numbers',   'Require Numbers'],
+                      ['require_special',   'Require Special Char'],
+                    ].map(([k, label]) => (
                       <label key={k} className="flex items-center gap-2 text-[12px] cursor-pointer">
                         <input type="checkbox" checked={!!policy[k]} onChange={e => setPolicy(p => ({ ...p, [k]: e.target.checked }))} className="rounded border-gray-300 text-brand-600" />
-                        <span className="text-gray-700 capitalize">{k.replace('require_', 'Require ')}</span>
+                        <span className="text-gray-700">{label}</span>
                       </label>
                     ))}
                   </div>
-                  <Button onClick={() => save(updatePasswordPolicy, policy, 'Password policy saved')} loading={saving}><Save size={13} /> Save Policy</Button>
+                  <div className="flex gap-2">
+                    <Button onClick={() => save(
+                      (data) => post('/api/v1/auth/password-policy', data),
+                      policy, 'Password policy saved'
+                    )} loading={saving}><Save size={13} /> Save Policy</Button>
+                    <Button variant="secondary" onClick={() => save(updatePasswordPolicy, policy, 'Policy also saved to legacy')}>Save to Legacy</Button>
+                  </div>
                 </div>
+
+                {/* Active Sessions */}
+                <div className="card p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Monitor size={14} className="text-gray-400" />
+                      <h3 className="text-[13px] font-bold">Active Sessions</h3>
+                    </div>
+                    <span className="text-[11px] text-gray-400">{sessions.length} active</span>
+                  </div>
+                  <DataTable searchable={false} columns={[
+                    { key: 'browser', label: 'Browser / OS', render: (v, r) => <span className="text-[12px]">{v} on {r.os}</span> },
+                    { key: 'ip_address', label: 'IP', render: v => <span className="font-mono text-[11px] text-gray-500">{v}</span> },
+                    { key: 'last_activity', label: 'Last Active', render: v => v ? new Date(v).toLocaleString() : '—' },
+                    { key: 'created_at', label: 'Signed In', render: v => v ? new Date(v).toLocaleDateString() : '—' },
+                    { key: 'actions', label: '', render: (_, r) => (
+                      <button onClick={async () => {
+                        try {
+                          await apiDel(`/api/v1/auth/sessions/${r.id}`)
+                          toast.success('Session revoked')
+                          setSessions(prev => prev.filter(s => s.id !== r.id))
+                        } catch (e) { toast.error(e.message) }
+                      }} className="p-1 text-gray-300 hover:text-red-500 transition-colors" title="Revoke">
+                        <LogOut size={13} />
+                      </button>
+                    )},
+                  ]} rows={sessions} emptyText="No active sessions" />
+                </div>
+
+                {/* Login History (own + all users for HEAD) */}
+                <div className="card p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Shield size={14} className="text-gray-400" />
+                    <h3 className="text-[13px] font-bold">Login History (All Users)</h3>
+                  </div>
+                  <DataTable searchable={false} columns={[
+                    { key: 'user_name', label: 'User', render: (v, r) => <div><p className="text-[12px] font-medium">{v || '—'}</p><p className="text-[10px] text-gray-400">{r.email}</p></div> },
+                    { key: 'ip_address', label: 'IP', render: v => <span className="font-mono text-[11px]">{v}</span> },
+                    { key: 'browser', label: 'Browser / OS', render: (v, r) => <span className="text-[11px] text-gray-500">{v} / {r.os}</span> },
+                    { key: 'status', label: 'Status', render: v => <Badge variant={v === 'success' ? 'success' : 'danger'}>{v}</Badge> },
+                    { key: 'failure_reason', label: 'Reason', render: v => v ? <span className="text-[11px] text-red-500">{v}</span> : '—' },
+                    { key: 'created_at', label: 'Date', render: v => v ? new Date(v).toLocaleString() : '—' },
+                  ]} rows={adminHistory.length > 0 ? adminHistory : loginHistory} emptyText="No login history" />
+                </div>
+
+                {/* IP Restrictions */}
                 <div className="card p-6">
                   <h3 className="text-[13px] font-bold mb-3">IP Restrictions</h3>
                   <DataTable searchable={false} columns={[

@@ -675,9 +675,10 @@ export default function BulkEmailPage() {
     try {
       const body = {
         ...recipientState,
-        buId:     recipientState.buId ? parseInt(recipientState.buId) : undefined,
-        subject:  composeState.subject,
-        bodyHtml: composeState.bodyHtml,
+        recipients: recipientState.recipientType,
+        buId:       recipientState.buId ? parseInt(recipientState.buId) : undefined,
+        subject:    composeState.subject,
+        bodyHtml:   composeState.bodyHtml,
         templateId: composeState.templateId || undefined,
       }
       const r = await api.post('/api/v1/email/bulk-send', body)

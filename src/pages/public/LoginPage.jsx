@@ -34,7 +34,11 @@ export default function LoginPage() {
       }
       if (data?.token) {
         saveAuth(data.token, data.user, data.tenant)
-        nav(getHomePath())
+        if (data.passwordExpired) {
+          nav('/change-password', { state: { expired: true } })
+        } else {
+          window.location.href = getHomePath()
+        }
       } else {
         setErr(json.error?.message || json.message || 'Invalid credentials')
       }

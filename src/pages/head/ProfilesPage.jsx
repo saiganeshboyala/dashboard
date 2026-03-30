@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Page, DataTable, Badge, Button, Modal, Input, Select, Loading, Tabs } from '../../components/Shared'
-import { getProfiles, createProfile, deleteProfile as deleteProfileApi, cloneProfile, getProfileUsers, getObjectPermissions, bulkSetObjectPermissions, getFieldPermissions, bulkSetFieldPermissions, getTabPermissions, setTabPermission, getPermissionSets, createPermissionSet, deletePermissionSet as deletePermSetApi, getPermSetObjectPerms, setPermSetObjectPerm, getAvailableObjects, getAvailableTabs, getSchemaFields } from '../../utils/api'
+import { getProfiles, createProfile, deleteProfile as deleteProfileApi, cloneProfile, getProfileUsers, getObjectPermissions, bulkSetObjectPermissions, getFieldPermissions, bulkSetFieldPermissions, getTabPermissions, setTabPermission, getPermissionSets, createPermissionSet, deletePermissionSet as deletePermSetApi, getPermSetObjectPerms, setPermSetObjectPerm, getAvailableObjects, getAvailableTabs, getSchemaFields, searchProfileUsers, addUsersToProfile, removeUserFromProfile } from '../../utils/api'
 
 const BASE_ROLES = [{ value: 'HEAD', label: 'System Admin' }, { value: 'BU_ADMIN', label: 'BU Admin' }, { value: 'RECRUITER', label: 'Recruiter / Employee' }, { value: 'STUDENT', label: 'Student' }]
 const PERM_ACTIONS = ['canRead', 'canCreate', 'canEdit', 'canDelete', 'canViewAll', 'canModifyAll']
@@ -114,11 +114,61 @@ function TabPermissionsPanel({ profileId }) {
 }
 
 function ProfileUsersPanel({ profileId }) {
-  const [users,setUsers]=useState([]);const [loading,setLoading]=useState(true)
-  useEffect(()=>{(async()=>{setLoading(true);try{const r=await getProfileUsers(profileId);setUsers(Array.isArray(r)?r:r?.data||[])}catch(e){console.error(e)}setLoading(false)})()},[profileId])
+  const [users,setUsers]=useState([]);const [loading,setLoading]=useState(true);const [showAdd,setShowAdd]=useState(false)
+  const fetch=useCallback(async()=>{setLoading(true);try{const r=await getProfileUsers(profileId);setUsers(Array.isArray(r)?r:r?.data||[])}catch(e){console.error(e)}setLoading(false)},[profileId])
+  useEffect(()=>{fetch()},[fetch])
+  const handleRemove=async(userId)=>{if(!confirm('Remove this user from the profile?'))return;try{await removeUserFromProfile(profileId,userId);fetch()}catch(e){alert(e.message)}}
   if(loading)return<Loading/>
-  return users.length===0?<div className="py-16 text-center text-sm text-gray-400">No users assigned to this profile yet.</div>:
-  <DataTable columns={[{key:'name',label:'Name'},{key:'email',label:'Email'},{key:'role',label:'Role',render:v=><Badge color="blue">{v}</Badge>},{key:'is_active',label:'Active',render:v=>v?<Badge color="green">Active</Badge>:<Badge color="red">Inactive</Badge>}]} rows={users}/>
+  return(<>
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-xs text-gray-400">{users.length} user{users.length!==1?'s':''} assigned</span>
+      <Button size="sm" onClick={()=>setShowAdd(true)}>+ Add Users</Button>
+    </div>
+    {users.length===0
+      ?<div className="py-16 text-center text-sm text-gray-400">No users assigned to this profile yet.</div>
+      :<DataTable columns={[
+          {key:'name',label:'Name'},
+          {key:'email',label:'Email'},
+          {key:'role',label:'Role',render:v=><Badge color="blue">{v}</Badge>},
+          {key:'is_active',label:'Active',render:v=>v?<Badge color="green">Active</Badge>:<Badge color="red">Inactive</Badge>},
+          {key:'actions',label:'',sortable:false,render:(_,row)=><Button variant="ghost" size="xs" onClick={()=>handleRemove(row.id)}><span className="text-red-500">Remove</span></Button>},
+        ]} rows={users}/>
+    }
+    <AddUsersModal open={showAdd} onClose={()=>setShowAdd(false)} profileId={profileId} existingUserIds={users.map(u=>u.id)} onAdded={()=>{setShowAdd(false);fetch()}}/>
+  </>)
+}
+
+function AddUsersModal({ open, onClose, profileId, existingUserIds, onAdded }) {
+  const [query,setQuery]=useState('');const [results,setResults]=useState([]);const [selected,setSelected]=useState(new Set());const [searching,setSearching]=useState(false);const [saving,setSaving]=useState(false)
+  useEffect(()=>{if(!open){setQuery('');setResults([]);setSelected(new Set())}},[open])
+  const search=useCallback(async(q)=>{if(!q.trim()){setResults([]);return}setSearching(true);try{const r=await searchProfileUsers(q);setResults(Array.isArray(r)?r:r?.data||[])}catch(e){console.error(e)}setSearching(false)},[])
+  useEffect(()=>{const t=setTimeout(()=>search(query),300);return()=>clearTimeout(t)},[query,search])
+  const toggle=(id)=>setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n})
+  const save=async()=>{if(!selected.size)return;setSaving(true);try{await addUsersToProfile(profileId,[...selected]);onAdded()}catch(e){alert(e.message)}setSaving(false)}
+  return(<Modal open={open} onClose={onClose} title="Add Users to Profile" width="max-w-lg">
+    <div className="space-y-3">
+      <Input placeholder="Search by name or email..." value={query} onChange={e=>setQuery(e.target.value)} label="Search Users"/>
+      <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-lg divide-y divide-gray-50">
+        {searching&&<div className="py-8 text-center text-sm text-gray-400">Searching...</div>}
+        {!searching&&query&&results.length===0&&<div className="py-8 text-center text-sm text-gray-400">No users found</div>}
+        {results.map(u=>{
+          const already=existingUserIds.includes(u.id)
+          return(<label key={u.id} className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 ${already?'opacity-50':''}`}>
+            <input type="checkbox" disabled={already} checked={already||selected.has(u.id)} onChange={()=>!already&&toggle(u.id)} className="w-4 h-4 rounded border-gray-300 text-brand-600"/>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900 truncate">{u.name}</div>
+              <div className="text-xs text-gray-400 truncate">{u.email} · <Badge color="blue">{u.role}</Badge>{u.profile_name&&<span className="ml-1 text-gray-300">({u.profile_name})</span>}</div>
+            </div>
+            {already&&<span className="text-xs text-green-600 font-medium">Already in profile</span>}
+          </label>)
+        })}
+      </div>
+      <div className="flex justify-between items-center pt-1">
+        <span className="text-xs text-gray-400">{selected.size} user{selected.size!==1?'s':''} selected</span>
+        <div className="flex gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={save} disabled={!selected.size||saving} loading={saving}>Add Selected</Button></div>
+      </div>
+    </div>
+  </Modal>)
 }
 
 function PermissionSetsTab() {

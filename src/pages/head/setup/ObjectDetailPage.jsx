@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Plus, Edit3, Trash2, ChevronRight, ExternalLink, Save,
-  Eye, EyeOff, CheckSquare, Square,
+  Eye, EyeOff, CheckSquare, Square, Layout,
 } from 'lucide-react'
 import {
   Page, Tabs, DataTable, Badge, Button, Modal, Input, Select, ConfirmDialog,
@@ -18,16 +18,16 @@ const FIELD_TYPES = [
   { type: 'number',       icon: '#',  label: 'Number' },
   { type: 'currency',     icon: '$',  label: 'Currency' },
   { type: 'percent',      icon: '%',  label: 'Percent' },
-  { type: 'date',         icon: '📅', label: 'Date' },
-  { type: 'datetime',     icon: '🕐', label: 'Date/Time' },
-  { type: 'boolean',      icon: '☑',  label: 'Checkbox' },
-  { type: 'picklist',     icon: '☰',  label: 'Picklist' },
-  { type: 'multipicklist',icon: '☷',  label: 'Multi-Picklist' },
+  { type: 'date',         icon: 'dt', label: 'Date' },
+  { type: 'datetime',     icon: 'dtt', label: 'Date/Time' },
+  { type: 'boolean',      icon: 'cb', label: 'Checkbox' },
+  { type: 'picklist',     icon: 'pl', label: 'Picklist' },
+  { type: 'multipicklist',icon: 'mpl', label: 'Multi-Picklist' },
   { type: 'email',        icon: '@',  label: 'Email' },
-  { type: 'phone',        icon: '📱', label: 'Phone' },
-  { type: 'url',          icon: '🔗', label: 'URL' },
+  { type: 'phone',        icon: 'ph', label: 'Phone' },
+  { type: 'url',          icon: '→',  label: 'URL' },
   { type: 'lookup',       icon: '↗',  label: 'Lookup' },
-  { type: 'formula',      icon: 'ƒx', label: 'Formula' },
+  { type: 'formula',      icon: 'fx', label: 'Formula' },
   { type: 'auto_number',  icon: '++', label: 'Auto Number' },
 ]
 
@@ -36,7 +36,7 @@ const ROLES = ['HEAD', 'BU_ADMIN', 'RECRUITER', 'STUDENT']
 // ─── Field creator modal ──────────────────────────────────────────────────────
 
 function FieldModal({ objectName, objects, editField, onClose, onSaved }) {
-  const { toast } = useToast()
+  const toast = useToast()
   const [step, setStep] = useState(editField ? 1 : 0)
   const [form, setForm] = useState(() => editField
     ? { ...editField }
@@ -55,7 +55,7 @@ function FieldModal({ objectName, objects, editField, onClose, onSaved }) {
   })
 
   const save = async () => {
-    if (!form.label.trim()) return toast('Label is required', 'error')
+    if (!form.label.trim()) return toast.error('Label is required')
     setSaving(true)
     try {
       if (editField?.id && editField.isCustom) {
@@ -71,17 +71,17 @@ function FieldModal({ objectName, objects, editField, onClose, onSaved }) {
           decimalPlaces: form.decimalPlaces ? parseInt(form.decimalPlaces) : null,
         })
       }
-      toast(editField ? 'Field updated' : 'Field created', 'success')
+      toast.success(editField ? 'Field updated' : 'Field created')
       onSaved()
       onClose()
-    } catch (e) { toast(e.message, 'error') }
+    } catch (e) { toast.error(e.message) }
     setSaving(false)
   }
 
   // Step 0: pick type
   if (step === 0) {
     return (
-      <Modal title="New Field — Choose Type" onClose={onClose} size="lg">
+      <Modal open title="New Field — Choose Type" onClose={onClose} width="max-w-2xl">
         <div className="grid grid-cols-4 gap-2 mb-4">
           {FIELD_TYPES.map(ft => (
             <button
@@ -108,13 +108,14 @@ function FieldModal({ objectName, objects, editField, onClose, onSaved }) {
 
   return (
     <Modal
+      open
       title={editField ? `Edit Field: ${editField.label}` : `New ${selectedType?.label || ''} Field`}
       onClose={onClose}
-      size="lg"
+      width="max-w-2xl"
     >
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Field Label *" value={form.label} onChange={v => set('label', v)} placeholder="e.g. LinkedIn URL" />
+          <Input label="Field Label *" value={form.label} onChange={e => set('label', e.target.value)} placeholder="e.g. LinkedIn URL" />
           <div>
             <label className="block text-[12px] text-gray-500 mb-1">API Name</label>
             <code className="block bg-gray-50 border border-gray-200 rounded px-3 py-2 text-[12px] text-indigo-600 font-mono">
@@ -124,8 +125,8 @@ function FieldModal({ objectName, objects, editField, onClose, onSaved }) {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Description" value={form.description || ''} onChange={v => set('description', v)} />
-          <Input label="Default Value" value={form.defaultValue || form.default_value || ''} onChange={v => set('defaultValue', v)} />
+          <Input label="Description" value={form.description || ''} onChange={e => set('description', e.target.value)} />
+          <Input label="Default Value" value={form.defaultValue || form.default_value || ''} onChange={e => set('defaultValue', e.target.value)} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -151,10 +152,10 @@ function FieldModal({ objectName, objects, editField, onClose, onSaved }) {
 
         {/* Type-specific options */}
         {(form.fieldType === 'text') && (
-          <Input label="Max Length" value={form.maxLength || ''} onChange={v => set('maxLength', v)} type="number" />
+          <Input label="Max Length" value={form.maxLength || ''} onChange={e => set('maxLength', e.target.value)} type="number" />
         )}
         {(form.fieldType === 'number' || form.fieldType === 'currency' || form.fieldType === 'percent') && (
-          <Input label="Decimal Places" value={form.decimalPlaces || ''} onChange={v => set('decimalPlaces', v)} type="number" />
+          <Input label="Decimal Places" value={form.decimalPlaces || ''} onChange={e => set('decimalPlaces', e.target.value)} type="number" />
         )}
         {(form.fieldType === 'picklist' || form.fieldType === 'multipicklist') && (
           <div>
@@ -172,9 +173,13 @@ function FieldModal({ objectName, objects, editField, onClose, onSaved }) {
           <Select
             label="Related To Object"
             value={form.lookupObject || ''}
-            onChange={v => set('lookupObject', v)}
-            options={objects.map(o => ({ value: o.name, label: o.label }))}
-          />
+            onChange={e => set('lookupObject', e.target.value)}
+          >
+            <option value="">— Select Object —</option>
+            {objects.map(o => (
+              <option key={o.name} value={o.name}>{o.label || o.name}</option>
+            ))}
+          </Select>
         )}
         {form.fieldType === 'formula' && (
           <div>
@@ -207,7 +212,7 @@ function FieldModal({ objectName, objects, editField, onClose, onSaved }) {
 // ─── Picklist editor modal ────────────────────────────────────────────────────
 
 function PicklistModal({ objectName, field, onClose }) {
-  const { toast } = useToast()
+  const toast = useToast()
   const [values,  setValues]  = useState([])
   const [loading, setLoading] = useState(true)
   const [newLabel, setNewLabel] = useState('')
@@ -238,20 +243,20 @@ function PicklistModal({ objectName, field, onClose }) {
       })
       setValues(v => [...v, r?.value || r])
       setNewLabel('')
-      toast('Value added', 'success')
-    } catch (e) { toast(e.message, 'error') }
+      toast.success('Value added')
+    } catch (e) { toast.error(e.message) }
   }
 
   const deleteValue = async (id) => {
     try {
       await api.del(`/api/v1/schema/picklists/${id}`)
       setValues(v => v.filter(x => x.id !== id))
-      toast('Value removed', 'success')
-    } catch (e) { toast(e.message, 'error') }
+      toast.success('Value removed')
+    } catch (e) { toast.error(e.message) }
   }
 
   return (
-    <Modal title={`Picklist Values: ${field.label}`} onClose={onClose} size="md">
+    <Modal open title={`Picklist Values: ${field.label}`} onClose={onClose}>
       {loading ? (
         <div className="py-8 text-center text-gray-400 text-sm">Loading…</div>
       ) : (
@@ -267,7 +272,7 @@ function PicklistModal({ objectName, field, onClose }) {
                   style={{ backgroundColor: v.color || '#6366f1' }}
                   title="Click preset to change"
                 />
-                <span className="flex-1 text-[13px] text-white">{v.label}</span>
+                <span className="flex-1 text-[13px] text-gray-800">{v.label}</span>
                 <code className="text-indigo-600 text-[11px] font-mono">{v.value}</code>
                 <button onClick={() => deleteValue(v.id)} className="text-gray-400 hover:text-red-500">
                   <Trash2 size={13} />
@@ -308,18 +313,19 @@ function PicklistModal({ objectName, field, onClose }) {
 // ─── Tab: Fields ──────────────────────────────────────────────────────────────
 
 function FieldsTab({ objectName, fields, loading, objects, onReload }) {
-  const { toast } = useToast()
-  const [showField,    setShowField]    = useState(false)
-  const [editField,    setEditField]    = useState(null)
-  const [picklistFor,  setPicklistFor]  = useState(null)
-  const [deleteTarget, setDeleteTarget] = useState(null)
+  const toast = useToast()
+  const [showField,         setShowField]         = useState(false)
+  const [editField,         setEditField]         = useState(null)
+  const [picklistFor,       setPicklistFor]       = useState(null)
+  const [deleteTarget,      setDeleteTarget]      = useState(null)
+  const [collapsedSections, setCollapsedSections] = useState({ 'System Fields': true })
 
   const deleteField = async (id) => {
     try {
       await api.del(`/api/v1/schema/fields/${id}`)
-      toast('Field deactivated', 'success')
+      toast.success('Field deactivated')
       onReload()
-    } catch (e) { toast(e.message, 'error') }
+    } catch (e) { toast.error(e.message) }
     setDeleteTarget(null)
   }
 
@@ -329,7 +335,7 @@ function FieldsTab({ objectName, fields, loading, objects, onReload }) {
       label: 'Field Label',
       render: (v, row) => (
         <div>
-          <span className="text-white">{v}</span>
+          <span className="text-gray-900">{v}</span>
           {row.isRequired && <span className="ml-2 text-rose-400 text-[10px]">Required</span>}
         </div>
       ),
@@ -392,18 +398,30 @@ function FieldsTab({ objectName, fields, loading, objects, onReload }) {
     },
   ]
 
-  // Group by section
-  const sections = {}
+  // Group by section — System Fields always last
+  const sectionsMap = {}
   fields.forEach(f => {
     const sec = f.sectionName || f.section_name || 'Standard Fields'
-    if (!sections[sec]) sections[sec] = []
-    sections[sec].push(f)
+    if (!sectionsMap[sec]) sectionsMap[sec] = []
+    sectionsMap[sec].push(f)
   })
+  const sectionEntries = Object.entries(sectionsMap).sort(([a], [b]) => {
+    if (a === 'System Fields') return 1
+    if (b === 'System Fields') return -1
+    return 0
+  })
+
+  const toggleSec = (name) => setCollapsedSections(prev => ({ ...prev, [name]: !prev[name] }))
+
+  const visibleFieldCount = fields.filter(f => {
+    const sec = f.sectionName || f.section_name || 'Standard Fields'
+    return sec !== 'System Fields'
+  }).length
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <p className="text-gray-500 text-[13px]">{fields.length} fields total</p>
+        <p className="text-gray-500 text-[13px]">{visibleFieldCount} fields <span className="text-gray-600">({fields.length} total incl. system)</span></p>
         <Button variant="primary" icon={Plus} onClick={() => { setEditField(null); setShowField(true) }}>
           New Field
         </Button>
@@ -412,15 +430,26 @@ function FieldsTab({ objectName, fields, loading, objects, onReload }) {
       {loading ? (
         <div className="py-12 text-center text-gray-400">Loading fields…</div>
       ) : (
-        Object.entries(sections).map(([sec, secFields]) => (
-          <div key={sec} className="mb-6">
-            <h3 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
-              {sec} <span className="text-gray-400">({secFields.length})</span>
-            </h3>
-            <DataTable rows={secFields} columns={columns} emptyText="No fields" />
-          </div>
-        ))
+        sectionEntries.map(([sec, secFields]) => {
+          const isSystem   = sec === 'System Fields'
+          const isCollapsed = !!collapsedSections[sec]
+          return (
+            <div key={sec} className="mb-6">
+              <button
+                onClick={() => toggleSec(sec)}
+                className="w-full flex items-center gap-2 mb-2 group text-left"
+              >
+                <span className={`w-2 h-2 rounded-full inline-block ${isSystem ? 'bg-slate-500' : 'bg-indigo-500'}`} />
+                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider group-hover:text-gray-300 transition-colors">
+                  {sec}
+                </span>
+                <span className="text-[11px] text-gray-500">({secFields.length})</span>
+                <span className={`ml-auto text-[10px] text-gray-600 transition-transform duration-150 ${isCollapsed ? '' : 'rotate-90'}`}>▶</span>
+              </button>
+              {!isCollapsed && <DataTable rows={secFields} columns={columns} emptyText="No fields" />}
+            </div>
+          )
+        })
       )}
 
       {showField && (
@@ -439,16 +468,15 @@ function FieldsTab({ objectName, fields, loading, objects, onReload }) {
           onClose={() => setPicklistFor(null)}
         />
       )}
-      {deleteTarget && (
-        <ConfirmDialog
-          title="Deactivate Field"
-          message={`Deactivate "${deleteTarget.label}"? The database column will remain but the field will be hidden.`}
-          onConfirm={() => deleteField(deleteTarget.id)}
-          onCancel={() => setDeleteTarget(null)}
-          confirmLabel="Deactivate"
-          danger
-        />
-      )}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Deactivate Field"
+        description={`Deactivate "${deleteTarget?.label}"? The database column will remain but the field will be hidden.`}
+        onConfirm={() => deleteField(deleteTarget.id)}
+        onClose={() => setDeleteTarget(null)}
+        confirmLabel="Deactivate"
+        danger
+      />
     </div>
   )
 }
@@ -457,77 +485,91 @@ function FieldsTab({ objectName, fields, loading, objects, onReload }) {
 
 function LayoutsTab({ objectName }) {
   const navigate = useNavigate()
-  const { toast } = useToast()
-  const [layouts, setLayouts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
-  const [newName, setNewName] = useState('')
+  const toast    = useToast()
+  const [layouts,  setLayouts]  = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [newName,  setNewName]  = useState('')
+  const [saving,   setSaving]   = useState(false)
 
   const load = useCallback(async () => {
+    setLoading(true)
     try {
       const r = await api.get(`/api/v1/schema/layouts?objectName=${objectName}`)
-      setLayouts(r?.layouts || [])
-    } catch { /* ignore */ }
+      setLayouts(Array.isArray(r) ? r : r?.layouts || [])
+    } catch (e) { toast.error(e.message) }
     setLoading(false)
   }, [objectName])
 
   useEffect(() => { load() }, [load])
 
   const createLayout = async () => {
-    if (!newName.trim()) return toast('Name required', 'error')
+    const name = newName.trim() || 'Default Layout'
+    setSaving(true)
     try {
-      const r = await api.post('/api/v1/schema/layouts', {
-        objectName, name: newName.trim(), sections: [], isDefault: layouts.length === 0,
+      const r  = await api.post('/api/v1/schema/layouts', {
+        objectName, name, sections: [], isDefault: layouts.length === 0,
       })
       const id = r?.layout?.id || r?.id
-      toast('Layout created', 'success')
       navigate(`/head/setup/objects/${objectName}/layouts/${id}`)
-    } catch (e) { toast(e.message, 'error') }
-    setCreating(false)
+    } catch (e) { toast.error(e.message); setSaving(false) }
   }
 
-  const columns = [
-    { key: 'name',      label: 'Layout Name', render: v => <span className="text-white font-medium">{v}</span> },
-    { key: 'role',      label: 'Assigned Role', render: v => v ? <Badge color="indigo">{v}</Badge> : <span className="text-gray-400">All</span> },
-    { key: 'isDefault', label: 'Default', render: v => v ? <Badge color="emerald">Default</Badge> : null },
-    {
-      key: 'id',
-      label: '',
-      render: (id) => (
-        <div className="flex gap-2 justify-end">
-          <Button variant="ghost" size="sm" icon={Edit3}
-            onClick={e => { e.stopPropagation(); navigate(`/head/setup/objects/${objectName}/layouts/${id}`) }}
-          >
-            Edit Layout
-          </Button>
-        </div>
-      ),
-    },
-  ]
+  if (loading) return <div className="py-12 text-center text-gray-400 text-[13px]">Loading…</div>
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-gray-500 text-[13px]">{layouts.length} layout(s)</p>
-        <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>New Layout</Button>
+    <div className="max-w-2xl">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h3 className="text-[14px] font-semibold text-gray-800">Page Layouts</h3>
+          <p className="text-[12px] text-gray-500 mt-0.5">Choose a layout to edit which fields appear on record pages.</p>
+        </div>
       </div>
-      <DataTable
-        rows={layouts}
-        columns={columns}
-        loading={loading}
-        emptyText="No layouts yet. Create a layout to control how records appear."
-        onRowClick={row => navigate(`/head/setup/objects/${objectName}/layouts/${row.id}`)}
-        rowClassName="cursor-pointer hover:bg-white/5"
-      />
-      {creating && (
-        <Modal title="New Page Layout" onClose={() => setCreating(false)} size="sm">
-          <Input label="Layout Name *" value={newName} onChange={setNewName} placeholder="e.g. Default Layout" />
-          <div className="flex justify-end gap-3 mt-4">
-            <Button variant="ghost" onClick={() => setCreating(false)}>Cancel</Button>
-            <Button variant="primary" onClick={createLayout}>Create & Open Editor</Button>
-          </div>
-        </Modal>
+
+      {/* Existing layouts */}
+      {layouts.length > 0 ? (
+        <div className="space-y-2 mb-8">
+          {layouts.map(l => (
+            <button
+              key={l.id}
+              onClick={() => navigate(`/head/setup/objects/${objectName}/layouts/${l.id}`)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/40 transition-all group text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-md bg-indigo-100 flex items-center justify-center">
+                  <Layout size={13} className="text-indigo-600" />
+                </div>
+                <div>
+                  <span className="text-[13px] font-medium text-gray-800">{l.name}</span>
+                  {l.isDefault && <span className="ml-2 text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Default</span>}
+                  {l.role && <span className="ml-2 text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">{l.role}</span>}
+                </div>
+              </div>
+              <span className="text-[12px] text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity font-medium">Edit Layout →</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="mb-6 p-4 rounded-lg bg-gray-50 border border-dashed border-gray-300 text-center text-[13px] text-gray-400">
+          No layouts yet.
+        </div>
       )}
+
+      {/* Create new */}
+      <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <p className="text-[12px] font-semibold text-gray-700 mb-3">Create a new layout</p>
+        <div className="flex gap-2">
+          <input
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && createLayout()}
+            placeholder="Layout name (e.g. Default Layout)"
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-[13px] outline-none focus:border-indigo-400 bg-gray-50"
+          />
+          <Button variant="primary" icon={Plus} onClick={createLayout} disabled={saving}>
+            {saving ? 'Creating…' : 'Create'}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -538,19 +580,21 @@ function ListViewsTab({ objectName }) {
   const navigate = useNavigate()
   const [views,   setViews]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState(null)
 
   const load = useCallback(async () => {
+    setError(null)
     try {
       const r = await api.get(`/api/v1/schema/list-views?objectName=${objectName}`)
       setViews(r?.views || [])
-    } catch { /* ignore */ }
+    } catch (e) { setError(e.message || 'Failed to load list views.') }
     setLoading(false)
   }, [objectName])
 
   useEffect(() => { load() }, [load])
 
   const columns = [
-    { key: 'name',       label: 'View Name',   render: v => <span className="text-white font-medium">{v}</span> },
+    { key: 'name',       label: 'View Name',   render: v => <span className="text-gray-900 font-medium">{v}</span> },
     { key: 'columns',    label: 'Columns',     render: v => <span className="text-gray-500 text-[12px]">{Array.isArray(v) ? v.length + ' columns' : '—'}</span> },
     { key: 'sharedWith', label: 'Shared With', render: v => <Badge color={v === 'all' ? 'indigo' : 'slate'}>{v || 'all'}</Badge> },
     { key: 'isDefault',  label: 'Default',     render: v => v ? <Badge color="emerald">Default</Badge> : null },
@@ -566,14 +610,19 @@ function ListViewsTab({ objectName }) {
           New List View
         </Button>
       </div>
-      <DataTable
-        rows={views}
-        columns={columns}
-        loading={loading}
-        emptyText="No list views configured."
-        onRowClick={row => navigate(`/head/setup/objects/${objectName}/list-views/${row.id}`)}
-        rowClassName="cursor-pointer hover:bg-white/5"
-      />
+      {error
+        ? <div className="py-8 text-center text-red-500 text-sm">{error}</div>
+        : (
+          <DataTable
+            rows={views}
+            columns={columns}
+            loading={loading}
+            emptyText="No list views configured."
+            onRowClick={row => navigate(`/head/setup/objects/${objectName}/list-views/${row.id}`)}
+            rowClassName="cursor-pointer hover:bg-white/5"
+          />
+        )
+      }
     </div>
   )
 }
@@ -581,7 +630,7 @@ function ListViewsTab({ objectName }) {
 // ─── Tab: Permissions ────────────────────────────────────────────────────────
 
 function PermissionsTab({ objectName, fields }) {
-  const { toast } = useToast()
+  const toast = useToast()
   const [perms,   setPerms]   = useState({})  // role__field → { visible, editable }
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
@@ -620,8 +669,8 @@ function PermissionsTab({ objectName, fields }) {
         calls.push(api.post('/api/v1/schema/permissions', { role, objectName, fieldName, visible: v.visible, editable: v.editable }))
       })
       await Promise.all(calls)
-      toast('Permissions saved', 'success')
-    } catch (e) { toast(e.message, 'error') }
+      toast.success('Permissions saved')
+    } catch (e) { toast.error(e.message) }
     setSaving(false)
   }
 
@@ -666,7 +715,7 @@ function PermissionsTab({ objectName, fields }) {
               const fn = field.fieldName || field.field_name
               return (
                 <tr key={fn} className="border-b border-white/5 hover:bg-white/3">
-                  <td className="py-2 px-3 text-white">{field.label}</td>
+                  <td className="py-2 px-3 text-gray-700">{field.label}</td>
                   {ROLES.map(role => {
                     const k = `${role}__${fn}`
                     const p = perms[k] || { visible: true, editable: true }
@@ -700,7 +749,7 @@ function PermissionsTab({ objectName, fields }) {
 export default function ObjectDetailPage() {
   const { objectName } = useParams()
   const navigate = useNavigate()
-  const { toast } = useToast()
+  const toast = useToast()
 
   const [object,  setObject]  = useState(null)
   const [fields,  setFields]  = useState([])
@@ -727,7 +776,7 @@ export default function ObjectDetailPage() {
         const obj = all.find(o => o.name === objectName)
         setObject(obj || { name: objectName, label: objectName, isCustom: false })
         await loadFields()
-      } catch (e) { toast(e.message, 'error') }
+      } catch (e) { toast.error(e.message) }
       setLoading(false)
     }
     init()

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { get } from '../../utils/api'
 import api from '../../utils/api'
+import { useObjectColumns } from '../../context/AppConfigContext'
 import { Page } from '../ui/Page'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
@@ -16,9 +18,9 @@ import { useToast } from '../../context/ToastContext'
 const PAGE_SIZE = 50
 
 const OBJECT_ICONS = {
-  students: '👤', submissions: '📄', interviews: '📅', business_units: '🏢',
-  recruiters: '👥', clusters: '🌐', placements: '💼', leads: '🎯',
-  cases: '📋', campaigns: '📣', expenses: '💰',
+  students: '', submissions: '', interviews: '', business_units: '',
+  recruiters: '', clusters: '', placements: '', leads: '',
+  cases: '', campaigns: '', expenses: '',
 }
 
 const HIDDEN_COLS = new Set(['tenant_id', 'password_hash', 'sf_id', 'created_by', 'owner_id', 'user_id'])
@@ -139,11 +141,18 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
   const [objectLabel, setObjectLabel] = useState('')
   const [loading, setLoading]       = useState(true)
   const [loadError, setLoadError]   = useState(null)
+  const [apiColumns, setApiColumns] = useState([])
   const [search, setSearch]         = useState(searchParams.get('search') || '')
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '')
   const [page, setPage]             = useState(parseInt(searchParams.get('page') || '0'))
   const [sortField, setSortField]   = useState('id')
   const [sortDir, setSortDir]       = useState('desc')
+
+  const [savedViews, setSavedViews]   = useState([])
+  const [activeView, setActiveView]   = useState(null)
+  const [showViewMenu, setShowViewMenu] = useState(false)
+  const [saveViewOpen, setSaveViewOpen] = useState(false)
+  const [saveViewName, setSaveViewName] = useState('')
 
   // Selection & bulk
   const [selected, setSelected]     = useState(new Set())
@@ -158,6 +167,7 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
 
   const { picklists, fields } = useDynamicSchema(objectName)
   const { perms, hiddenFields } = usePermissions(objectName)
+  const configColumns = useObjectColumns(objectName)
   const toast = useToast()
 
   const canCreate = perms?.canCreate !== false
@@ -165,6 +175,9 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
   const canDelete = perms?.canDelete !== false
 
   const basePath = basePathProp || `/head/dynamic/${objectName}`
+  // When basePath is generic (e.g. /bu/dynamic) and doesn't include objectName,
+  // detail navigation must include objectName: /bu/dynamic/students/123
+  const detailBase = basePath.endsWith(`/${objectName}`) ? basePath : `${basePath}/${objectName}`
 
   // Cmd/Ctrl+N → open "New record" form
   useEffect(() => {
@@ -195,6 +208,7 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
       setRecords(res?.records || [])
       setTotal(res?.total || 0)
       setObjectLabel(res?.objectLabel || objectName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+      if (res?.columns?.length > 0) setApiColumns(res.columns)
     } catch (e) {
       setLoadError(e.message || 'Failed to load records')
       setRecords([])
@@ -204,8 +218,48 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
 
   useEffect(() => { fetchRecords() }, [fetchRecords])
 
-  // Reset page + selection on objectName change
-  useEffect(() => { setPage(0); setSelected(new Set()) }, [objectName])
+  // Reset page + selection + columns on objectName change
+  useEffect(() => { setPage(0); setSelected(new Set()); setApiColumns([]) }, [objectName])
+
+  const applyView = useCallback((view) => {
+    if (view.sortField) setSortField(view.sortField)
+    if (view.sortDir)   setSortDir(view.sortDir === 'desc' ? 'desc' : 'asc')
+    setPage(0)
+  }, [])
+
+  const loadViews = useCallback(async () => {
+    try {
+      const res = await get(`/api/v1/schema/list-views?objectName=${objectName}`)
+      const views = res?.views || []
+      setSavedViews(views)
+      const def = views.find(v => v.isDefault)
+      if (def && !activeView) {
+        applyView(def)
+        setActiveView(def)
+      }
+    } catch {}
+  }, [objectName, applyView]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveCurrentView = async () => {
+    if (!saveViewName.trim()) return
+    try {
+      const viewData = {
+        objectName,
+        name: saveViewName,
+        columns: columns.map(c => c.key),
+        sortField,
+        sortDir,
+        isDefault: false,
+        sharedWith: 'all',
+      }
+      await api.post('/api/v1/schema/list-views', viewData)
+      setSaveViewOpen(false)
+      setSaveViewName('')
+      loadViews()
+    } catch {}
+  }
+
+  useEffect(() => { loadViews() }, [loadViews])
 
   // Sync URL params
   useEffect(() => {
@@ -278,13 +332,21 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
   }
 
   // ── Column derivation ──────────────────────────────────────────────────────
-  const columns = useMemo(() => (
-    records.length > 0
-      ? Object.keys(records[0])
-          .filter(k => !HIDDEN_COLS.has(k) && !hiddenFields.has(k))
-          .slice(0, 10)
-      : []
-  ), [records, hiddenFields])
+  // Priority: (1) API response columns → (2) AppConfig columns → (3) Object.keys fallback
+  const toLabel = k => k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    .replace(/^Id$/, 'ID').replace(/Bu /, 'BU ')
+
+  const columns = useMemo(() => {
+    let raw = apiColumns.length > 0
+      ? apiColumns
+      : configColumns?.length > 0
+        ? configColumns
+        : records.length > 0
+          ? Object.keys(records[0]).filter(k => !HIDDEN_COLS.has(k)).slice(0, 10)
+              .map(k => ({ key: k, label: toLabel(k), type: 'text' }))
+          : []
+    return raw.filter(c => !HIDDEN_COLS.has(c.key) && !hiddenFields.has(c.key))
+  }, [apiColumns, configColumns, records, hiddenFields]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fieldMap = useMemo(() => {
     const map = {}
@@ -293,7 +355,7 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
   }, [fields])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
-  const icon       = OBJECT_ICONS[objectName] || '📦'
+  const icon       = OBJECT_ICONS[objectName] ?? ''
 
   const pageButtons = (() => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i)
@@ -303,7 +365,7 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
 
   return (
     <Page
-      title={`${icon} ${objectLabel}`}
+      title={objectLabel}
       subtitle={`${total.toLocaleString()} record${total !== 1 ? 's' : ''}`}
       actions={
         <div className="flex items-center gap-2">
@@ -321,6 +383,47 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
       }
     >
       {loadError && <Alert variant="error" className="mb-3">{loadError}</Alert>}
+
+      {/* View selector */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="relative">
+          <button
+            onClick={() => setShowViewMenu(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[12px] font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            {activeView?.name || 'All Records'}
+            <ChevronDown size={12} className="text-gray-400" />
+          </button>
+          {showViewMenu && (
+            <div className="absolute z-30 top-full mt-1 left-0 min-w-[180px] bg-white border border-gray-200 rounded-xl shadow-xl py-1">
+              <div
+                className="px-3 py-2 text-[12px] text-gray-700 hover:bg-blue-50 cursor-pointer font-medium"
+                onClick={() => { setActiveView(null); setShowViewMenu(false); setSearch(''); setPage(0) }}
+              >
+                All Records
+              </div>
+              {savedViews.map(view => (
+                <div
+                  key={view.id}
+                  className={`px-3 py-2 text-[12px] hover:bg-blue-50 cursor-pointer flex items-center justify-between ${activeView?.id === view.id ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+                  onClick={() => { applyView(view); setActiveView(view); setShowViewMenu(false) }}
+                >
+                  <span>{view.name}</span>
+                  {view.isDefault && <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 rounded-full">default</span>}
+                </div>
+              ))}
+              <div className="border-t border-gray-100 mt-1 pt-1">
+                <div
+                  className="px-3 py-2 text-[12px] text-blue-600 hover:bg-blue-50 cursor-pointer"
+                  onClick={() => { setShowViewMenu(false); setSaveViewOpen(true) }}
+                >
+                  + Save current view
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Search bar */}
       <div className="flex items-center gap-3 mb-4">
@@ -350,7 +453,7 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
         <Loading />
       ) : records.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-xl p-12 text-center shadow-card">
-          <div className="text-4xl mb-4">{icon}</div>
+          <div className="mb-4"></div>
           <p className="text-gray-400 text-[13px]">
             No {objectLabel.toLowerCase()} found{search ? ` matching "${search}"` : ''}
           </p>
@@ -374,13 +477,13 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
                   )}
                   {columns.map(col => (
                     <th
-                      key={col}
+                      key={col.key}
                       className="px-3 py-2.5 text-left font-semibold text-gray-600 cursor-pointer hover:text-gray-900 whitespace-nowrap select-none"
-                      onClick={() => toggleSort(col)}
+                      onClick={() => toggleSort(col.key)}
                     >
                       <span className="flex items-center gap-1">
-                        {col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/^Id$/, 'ID').replace(/Bu /, 'BU ')}
-                        {sortField === col && (
+                        {col.label || toLabel(col.key)}
+                        {sortField === col.key && (
                           <span className="text-blue-500">{sortDir === 'asc' ? '↑' : '↓'}</span>
                         )}
                       </span>
@@ -394,7 +497,7 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
                   <tr
                     key={row.id}
                     className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selected.has(row.id) ? 'bg-blue-50' : ''}`}
-                    onClick={() => navigate(`${basePath}/${row.id}`)}
+                    onClick={() => navigate(`${detailBase}/${row.id}`)}
                   >
                     {/* Checkbox — only when delete is permitted */}
                     {canDelete && (
@@ -405,26 +508,26 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
 
                     {columns.map(col => (
                       <td
-                        key={col}
+                        key={col.key}
                         className="px-3 py-2 text-gray-700 max-w-[200px]"
                         onClick={e => {
                           // Only intercept clicks on non-id cols for inline edit
-                          if (col !== 'id') e.stopPropagation()
+                          if (col.key !== 'id') e.stopPropagation()
                         }}
                       >
-                        {col === 'id' ? (
-                          <span className="text-blue-600 font-semibold">#{row[col]}</span>
+                        {col.key === 'id' ? (
+                          <span className="text-blue-600 font-semibold">#{row[col.key]}</span>
                         ) : canEdit ? (
                           <InlineCell
                             rowId={row.id}
-                            fieldKey={col}
-                            value={row[col]}
-                            field={fieldMap[col]}
+                            fieldKey={col.key}
+                            value={row[col.key]}
+                            field={fieldMap[col.key]}
                             picklists={picklists}
                             onSave={handleCellSave}
                           />
                         ) : (
-                          formatCellValue(col, row[col])
+                          formatCellValue(col.key, row[col.key])
                         )}
                       </td>
                     ))}
@@ -493,6 +596,28 @@ export function DynamicList({ objectName: objectNameProp, basePath: basePathProp
         onConfirm={bulkDelete}
         onCancel={() => setConfirmBulkDelete(false)}
       />
+
+      {/* Save View Modal */}
+      {saveViewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-80 p-6">
+            <h3 className="text-[14px] font-bold text-gray-900 mb-4">Save Current View</h3>
+            <input
+              type="text"
+              value={saveViewName}
+              onChange={e => setSaveViewName(e.target.value)}
+              placeholder="View name (e.g. 'In Market Students')"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-blue-400 mb-4"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && saveCurrentView()}
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setSaveViewOpen(false)} className="px-4 py-2 text-[13px] text-gray-600 hover:text-gray-900">Cancel</button>
+              <button onClick={saveCurrentView} className="px-4 py-2 text-[13px] bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Page>
   )
 }

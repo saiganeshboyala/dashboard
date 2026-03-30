@@ -72,18 +72,18 @@ const FIELD_TYPE_ICONS = {
   text: "Aa",
   number: "#",
   email: "@",
-  phone: "📱",
-  url: "🔗",
-  date: "📅",
-  datetime: "🕐",
+  phone: "ph",
+  url: "→",
+  date: "dt",
+  datetime: "dtt",
   textarea: "¶",
-  picklist: "☰",
-  multipicklist: "☷",
-  checkbox: "☑",
+  picklist: "pl",
+  multipicklist: "mpl",
+  checkbox: "cb",
   currency: "$",
   percent: "%",
-  lookup: "🔗",
-  formula: "ƒx",
+  lookup: "↗",
+  formula: "fx",
   auto_number: "++",
 };
 
@@ -212,14 +212,12 @@ function ObjectsTab({ selectedObj, onSelect }) {
               <span className="text-[10px] text-gray-400">
                 {obj.field_count || "—"} fields
               </span>
-              {obj.is_custom && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setConfirmDelObj(obj.name); }}
-                  className="text-gray-300 hover:text-red-500"
-                >
-                  <Trash2 size={12} />
-                </button>
-              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDelObj(obj.name); }}
+                className="text-gray-300 hover:text-red-500"
+              >
+                <Trash2 size={12} />
+              </button>
             </div>
           </div>
         ))}
@@ -412,22 +410,20 @@ function FieldsTab({ objectName }) {
                   {f.defaultValue || f.default_value || "—"}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  {(f.isCustom || f.is_custom) && (
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => setEditField(f)}
-                        className="text-gray-300 hover:text-blue-500"
-                      >
-                        <Edit3 size={13} />
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelField(f)}
-                        className="text-gray-300 hover:text-red-500"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => setEditField(f)}
+                      className="text-gray-300 hover:text-blue-500"
+                    >
+                      <Edit3 size={13} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelField(f)}
+                      className="text-gray-300 hover:text-red-500"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -787,20 +783,20 @@ function DependentPicklistsTab({ objectName }) {
 
   const load = () => {
     setLoading(true);
-    api("/api/v1/knowledge/dependent-picklists")
+    api(`/api/v1/schema/dependent-picklists?objectName=${objectName}`)
       .then((r) => setDeps(Array.isArray(r) ? r : r?.dependencies || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   };
   useEffect(() => {
     load();
-  }, []);
+  }, [objectName]);
 
-  const filtered = deps.filter((d) => d.object_name === objectName);
+  const filtered = deps;
 
   const create = async () => {
     try {
-      await api("/api/v1/knowledge/dependent-picklists", {
+      await api("/api/v1/schema/dependent-picklists", {
         method: "POST",
         body: JSON.stringify({ objectName, ...form }),
       });
@@ -814,7 +810,7 @@ function DependentPicklistsTab({ objectName }) {
   };
 
   const del = async (id) => {
-    await api(`/api/v1/knowledge/dependent-picklists/${id}`, {
+    await api(`/api/v1/schema/dependent-picklists/${id}`, {
       method: "DELETE",
     });
     load();
@@ -823,7 +819,7 @@ function DependentPicklistsTab({ objectName }) {
   const resolve = async (parentField, parentValue, childField) => {
     try {
       const r = await api(
-        `/api/v1/knowledge/dependent-picklists/resolve?objectName=${objectName}&parentField=${parentField}&parentValue=${parentValue}&childField=${childField}`,
+        `/api/v1/schema/dependent-picklists/resolve?objectName=${objectName}&parentField=${parentField}&parentValue=${parentValue}&childField=${childField}`,
       );
       setTestResult(r);
     } catch (e) {
@@ -995,9 +991,11 @@ function LayoutsTab({ objectName }) {
       .then(([l, f]) => {
         setLayouts(Array.isArray(l) ? l : l?.layouts || []);
         setAvailableFields(
-          (Array.isArray(f) ? f : f?.fields || []).map(
-            (x) => x.field_name || x.label,
-          ),
+          [...new Set(
+            (Array.isArray(f) ? f : f?.fields || []).map(
+              (x) => x.field_name || x.label,
+            )
+          )],
         );
       })
       .catch(console.error)
@@ -1237,9 +1235,9 @@ function LayoutsTab({ objectName }) {
                 Unassigned Fields (click to add to last section):
               </p>
               <div className="flex flex-wrap gap-1">
-                {unassignedFields.map((f) => (
+                {unassignedFields.map((f, fi) => (
                   <button
-                    key={f}
+                    key={`${fi}-${f}`}
                     onClick={() =>
                       addFieldToSection(form.sections.length - 1, f)
                     }
@@ -1850,6 +1848,190 @@ function SchemaBuilderTab({ objects }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TAB N: CUSTOM ACTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+const ACTION_TYPES = [
+  { value: 'update_fields', label: 'Update Fields' },
+  { value: 'clone_record',  label: 'Clone Record' },
+  { value: 'call_api',      label: 'Call External API' },
+  { value: 'send_email',    label: 'Send Email' },
+]
+const ACTION_COLORS = ['blue', 'green', 'red', 'orange', 'purple', 'gray']
+
+function CustomActionsTab({ objectName }) {
+  const toast = useToast()
+  const [actions, setActions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const [editAction, setEditAction] = useState(null)
+  const [confirmDel, setConfirmDel] = useState(null)
+  const [deleting, setDeleting]   = useState(false)
+  const [form, setForm] = useState({ actionType: 'update_fields', buttonColor: 'blue', buttonLocation: 'detail', requiresConfirmation: true })
+
+  const load = () => {
+    setLoading(true)
+    api(`/api/v1/schema/custom-actions?objectName=${objectName}`)
+      .then(r => setActions(Array.isArray(r) ? r : []))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }
+  useEffect(() => { load() }, [objectName])
+
+  const save = async () => {
+    try {
+      if (editAction) {
+        await api(`/api/v1/schema/custom-actions/${editAction.id}`, { method: 'PUT', body: JSON.stringify({ objectName, ...form }) })
+        toast.success('Action updated!')
+      } else {
+        await api('/api/v1/schema/custom-actions', { method: 'POST', body: JSON.stringify({ objectName, ...form }) })
+        toast.success('Action created!')
+      }
+      setShowCreate(false); setEditAction(null); setForm({ actionType: 'update_fields', buttonColor: 'blue', buttonLocation: 'detail', requiresConfirmation: true })
+      load()
+    } catch (e) { toast.error(e.message) }
+  }
+
+  const del = async (id) => {
+    setDeleting(true)
+    try {
+      await api(`/api/v1/schema/custom-actions/${id}`, { method: 'DELETE' })
+      toast.success('Action deleted')
+      load()
+    } catch (e) { toast.error(e.message) }
+    setDeleting(false)
+    setConfirmDel(null)
+  }
+
+  const openEdit = (action) => {
+    setEditAction(action)
+    setForm({
+      label: action.label, actionType: action.action_type, buttonColor: action.button_color,
+      buttonLocation: action.button_location, requiresConfirmation: action.requires_confirmation,
+      sortOrder: action.sort_order, config: action.config,
+    })
+    setShowCreate(true)
+  }
+
+  const btnColorClass = (color) => ({
+    blue: 'bg-blue-600 text-white', green: 'bg-green-600 text-white',
+    red: 'bg-red-600 text-white', orange: 'bg-orange-500 text-white',
+    purple: 'bg-purple-600 text-white', gray: 'bg-gray-600 text-white',
+  }[color] || 'bg-blue-600 text-white')
+
+  if (loading) return <Loading />
+
+  return (
+    <div>
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+        <p className="text-sm text-blue-800">
+          Custom actions appear as buttons on record detail pages. Use them to update fields,
+          clone records, call external APIs, or trigger automated processes — all without code.
+        </p>
+      </div>
+
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-sm text-gray-500">{actions.length} actions on <span className="font-mono font-bold">{objectName}</span></p>
+        <Button onClick={() => { setShowCreate(true); setEditAction(null); setForm({ actionType: 'update_fields', buttonColor: 'blue', buttonLocation: 'detail', requiresConfirmation: true }) }}>
+          <Plus size={14} /> New Action
+        </Button>
+      </div>
+
+      {actions.length === 0 ? (
+        <div className="bg-gray-50 border rounded-xl p-8 text-center text-gray-400 text-sm">
+          No custom actions yet. Create your first action to add buttons to record pages.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {actions.map(action => (
+            <div key={action.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center gap-4">
+              <button className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold shrink-0 ${btnColorClass(action.button_color)}`}>
+                {action.label}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-medium text-gray-800">{action.label}</p>
+                <p className="text-[11px] text-gray-400">
+                  {ACTION_TYPES.find(t => t.value === action.action_type)?.label || action.action_type}
+                  {' · '}
+                  {action.button_location === 'detail' ? 'Detail page' : action.button_location}
+                  {action.requires_confirmation && ' · Requires confirmation'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={() => openEdit(action)} className="text-gray-300 hover:text-blue-500"><Edit3 size={13} /></button>
+                <button onClick={() => setConfirmDel(action)} className="text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Modal open={showCreate || !!editAction} onClose={() => { setShowCreate(false); setEditAction(null) }}
+        title={editAction ? 'Edit Action' : 'New Custom Action'} width="max-w-xl">
+        <div className="space-y-4 mb-6">
+          <Input label="Button Label" value={form.label || ''} onChange={e => setForm({ ...form, label: e.target.value })} placeholder="Send to Ceipal" />
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="Action Type" value={form.actionType || 'update_fields'} onChange={e => setForm({ ...form, actionType: e.target.value })}>
+              {ACTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </Select>
+            <Select label="Button Location" value={form.buttonLocation || 'detail'} onChange={e => setForm({ ...form, buttonLocation: e.target.value })}>
+              <option value="detail">Detail Page</option>
+              <option value="list">List Page</option>
+              <option value="both">Both</option>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[12px] font-medium text-gray-700 mb-1.5">Button Color</label>
+              <div className="flex gap-2">
+                {ACTION_COLORS.map(c => (
+                  <button key={c} onClick={() => setForm({ ...form, buttonColor: c })}
+                    className={`w-6 h-6 rounded-full border-2 ${form.buttonColor === c ? 'border-gray-900 scale-110' : 'border-transparent'} ${btnColorClass(c)}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-5">
+              <input type="checkbox" id="reqConf" checked={!!form.requiresConfirmation}
+                onChange={e => setForm({ ...form, requiresConfirmation: e.target.checked })}
+                className="accent-blue-600" />
+              <label htmlFor="reqConf" className="text-[12px] text-gray-700">Require confirmation</label>
+            </div>
+          </div>
+
+          {form.actionType === 'update_fields' && (
+            <div>
+              <label className="block text-[12px] font-medium text-gray-700 mb-1.5">Field Updates (JSON)</label>
+              <textarea
+                value={typeof form.config === 'object' ? JSON.stringify(form.config?.fieldUpdates || {}, null, 2) : '{}'}
+                onChange={e => { try { setForm({ ...form, config: { fieldUpdates: JSON.parse(e.target.value) } }) } catch {} }}
+                className="w-full h-24 px-2.5 py-2 border border-gray-300 rounded-lg text-[11px] font-mono outline-none focus:border-blue-400 resize-none"
+                placeholder={'{\n  "marketing_status": "Placed"\n}'}
+              />
+            </div>
+          )}
+          {form.actionType === 'call_api' && (
+            <div className="space-y-2">
+              <Input label="API URL" value={form.config?.url || ''} onChange={e => setForm({ ...form, config: { ...form.config, url: e.target.value } })} placeholder="https://api.example.com/webhook" />
+              <Select label="HTTP Method" value={form.config?.method || 'POST'} onChange={e => setForm({ ...form, config: { ...form.config, method: e.target.value } })}>
+                <option>POST</option><option>PUT</option><option>PATCH</option><option>GET</option>
+              </Select>
+            </div>
+          )}
+          <Input label="Sort Order" type="number" value={form.sortOrder || 0} onChange={e => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })} />
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => { setShowCreate(false); setEditAction(null) }}>Cancel</Button>
+          <Button onClick={save}>Save Action</Button>
+        </div>
+      </Modal>
+
+      <ConfirmDialog open={!!confirmDel} onClose={() => setConfirmDel(null)} onConfirm={() => del(confirmDel?.id)}
+        title="Delete Action" description={`Delete "${confirmDel?.label}"?`} confirmLabel="Delete" danger loading={deleting} />
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN: SchemaAdminPage
 // ═══════════════════════════════════════════════════════════════════════════
 export default function SchemaAdminPage() {
@@ -1880,6 +2062,7 @@ export default function SchemaAdminPage() {
           { id: "layouts", label: "Page Layouts" },
           { id: "permissions", label: "Permissions" },
           { id: "record-types", label: "Record Types" },
+          { id: "actions", label: "Custom Actions" },
         ]}
       />
 
@@ -1918,6 +2101,7 @@ export default function SchemaAdminPage() {
         {tab === "layouts" && <LayoutsTab objectName={selectedObj} />}
         {tab === "permissions" && <PermissionsTab objectName={selectedObj} />}
         {tab === "record-types" && <RecordTypesTab objectName={selectedObj} />}
+        {tab === "actions" && <CustomActionsTab objectName={selectedObj} />}
       </div>
     </Page>
   );

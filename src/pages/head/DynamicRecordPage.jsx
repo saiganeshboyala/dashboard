@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Page, Badge, Button, Loading, Tabs, DataTable } from '../../components/Shared';
 import api from '../../utils/api';
+import { usePermissions } from '../../hooks/usePermissions';
 
 // Fields to hide from the detail view (internal/system fields)
 const HIDDEN_FIELDS = new Set([
@@ -17,6 +18,7 @@ const READONLY_FIELDS = new Set([
 export default function DynamicRecordPage() {
   const { objectName, id } = useParams();
   const navigate = useNavigate();
+  const { perms, hiddenFields, readOnlyFields } = usePermissions(objectName);
   const isNew = id === 'new';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -106,10 +108,16 @@ export default function DynamicRecordPage() {
   if (loading) return <Page title="Loading..."><Loading /></Page>;
   if (!data) return <Page title="Not Found"><p style={{ color: '#94a3b8' }}>Record not found</p></Page>;
 
-  const { record, fields, picklists, layout, related } = data;
+  const { record, fields, picklists, layout, related, canEdit: apiCanEdit, canDelete: apiCanDelete } = data;
 
-  // Group fields by section
-  const visibleFields = fields.filter(f => !HIDDEN_FIELDS.has(f.field_name));
+  // Effective permission: use API-returned flags (set by backend per profile), fall back to hook
+  const canEditRecord  = apiCanEdit  ?? perms?.canEdit  ?? true;
+  const canDeleteRecord = apiCanDelete ?? perms?.canDelete ?? false;
+
+  // Group fields by section — filter system fields AND profile-hidden fields
+  const visibleFields = fields.filter(f =>
+    !HIDDEN_FIELDS.has(f.field_name) && !hiddenFields.has(f.field_name) && !f.hidden
+  );
   const sections = groupBySection(visibleFields, layout);
 
   const objectLabel = objectName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -157,7 +165,7 @@ export default function DynamicRecordPage() {
             </>
           ) : (
             <>
-              <Button onClick={startEdit}>Edit</Button>
+              {canEditRecord && <Button onClick={startEdit}>Edit</Button>}
               <button onClick={() => navigate(-1)}
                 style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 13 }}>
                 ← Back
@@ -187,7 +195,7 @@ export default function DynamicRecordPage() {
                       field={field}
                       value={currentValues[field.field_name]}
                       picklist={picklists[field.field_name]}
-                      editing={isEditMode && !READONLY_FIELDS.has(field.field_name)}
+                      editing={isEditMode && !READONLY_FIELDS.has(field.field_name) && !readOnlyFields.has(field.field_name) && !field.read_only}
                       onChange={(val) => handleFieldChange(field.field_name, val)}
                       isOdd={fi % 2 === 1}
                     />

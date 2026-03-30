@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Page, Badge, Button, Modal, Input, Select, Loading, ConfirmDialog } from '../../components/Shared'
 import { getToken } from '../../utils/auth'
 import { Plus, Save, Settings, Trash2, GripVertical, BarChart3, Hash, Table, Filter, Activity, Trophy, FileText, ArrowLeft, RefreshCw } from 'lucide-react'
@@ -29,6 +29,8 @@ export default function DashboardBuilderPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [newDashName, setNewDashName] = useState('')
   const [showNewDash, setShowNewDash] = useState(false)
+  const [draggedId, setDraggedId] = useState(null)
+  const [dragOverId, setDragOverId] = useState(null)
 
   useEffect(() => {
     loadDashboards()
@@ -190,12 +192,29 @@ export default function DashboardBuilderPage() {
       {/* Widget Grid */}
       <div className="grid grid-cols-12 gap-4 auto-rows-[80px]">
         {(activeDash.widgets || []).map(widget => (
-          <div key={widget.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col"
+          <div key={widget.id}
+            draggable
+            onDragStart={() => setDraggedId(widget.id)}
+            onDragOver={e => { e.preventDefault(); setDragOverId(widget.id) }}
+            onDrop={() => {
+              if (!draggedId || draggedId === widget.id) return
+              const widgets = [...activeDash.widgets]
+              const fromIdx = widgets.findIndex(w => w.id === draggedId)
+              const toIdx   = widgets.findIndex(w => w.id === widget.id)
+              widgets.splice(toIdx, 0, widgets.splice(fromIdx, 1)[0])
+              setActiveDash(prev => ({ ...prev, widgets }))
+              setDraggedId(null); setDragOverId(null)
+            }}
+            onDragEnd={() => { setDraggedId(null); setDragOverId(null) }}
+            className={`bg-white border rounded-xl overflow-hidden flex flex-col transition-all
+              ${dragOverId === widget.id && draggedId !== widget.id ? 'border-blue-400 ring-2 ring-blue-300' : 'border-gray-200'}
+              ${draggedId === widget.id ? 'opacity-40 scale-95' : 'opacity-100'}
+            `}
             style={{ gridColumn: `span ${Math.min(widget.w || 4, 12)}`, gridRow: `span ${widget.h || 3}` }}>
             {/* Widget header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50 shrink-0">
-              <div className="flex items-center gap-2">
-                <GripVertical size={12} className="text-gray-300" />
+              <div className="flex items-center gap-2 cursor-grab active:cursor-grabbing">
+                <GripVertical size={12} className="text-gray-400" />
                 <span className="text-xs font-medium text-gray-700">{widget.title}</span>
               </div>
               <div className="flex gap-1">

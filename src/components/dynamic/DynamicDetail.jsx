@@ -11,6 +11,9 @@ import { Badge } from '../ui/Badge'
 import { FieldRenderer, READONLY_FIELDS } from './FieldRenderer'
 import { RelatedList } from './RelatedList'
 import { usePermissions } from '../../hooks/usePermissions'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { useToast } from '../../context/ToastContext'
+import { Mail, Copy, CheckCheck } from 'lucide-react'
 
 // System fields to hide in the UI
 const HIDDEN_FIELDS = new Set([
@@ -195,6 +198,8 @@ export function DynamicDetail({ objectName: objectNameProp, basePath }) {
 
   const { perms, hiddenFields, readOnlyFields } = usePermissions(objectName)
 
+  const toast = useToast()
+
   const [data, setData]           = useState(null)
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -203,6 +208,12 @@ export function DynamicDetail({ objectName: objectNameProp, basePath }) {
   const [saving, setSaving]       = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [activeTab, setActiveTab] = useState('details')
+  const [actions, setActions]       = useState([])
+  const [executingAction, setExecutingAction] = useState(null)
+  const [confirmAction, setConfirmAction] = useState(null)
+  const [inviting, setInviting]     = useState(false)
+  const [inviteUrl, setInviteUrl]   = useState(null)
+  const [inviteCopied, setInviteCopied] = useState(false)
 
   const fetchRecord = useCallback(async () => {
     setLoading(true)
@@ -210,6 +221,7 @@ export function DynamicDetail({ objectName: objectNameProp, basePath }) {
     try {
       const res = await api.get(`/api/v1/dynamic/${objectName}/${id}`)
       setData(res || null)
+      setActions(res?.actions || [])
     } catch (e) {
       setError(e.message || 'Failed to load record')
     }
@@ -256,6 +268,46 @@ export function DynamicDetail({ objectName: objectNameProp, basePath }) {
 
   const handleFieldChange = (fieldName, val) => {
     setEditValues(prev => ({ ...prev, [fieldName]: val }))
+  }
+
+  const executeAction = async (action) => {
+    setExecutingAction(action.id)
+    try {
+      const result = await api.post(`/api/v1/dynamic/${objectName}/${id}/action/${action.id}`, {})
+      toast.success(result?.message || `${action.label} completed`)
+      await fetchRecord()
+    } catch (e) {
+      toast.error(e.message || `${action.label} failed`)
+    }
+    setExecutingAction(null)
+    setConfirmAction(null)
+  }
+
+  // ── Invite helper (recruiters / students without a user account) ────────────
+  const getInviteInfo = (rec) => {
+    if (!rec) return null
+    if (objectName === 'recruiters') return { email: rec.email,          name: `${rec.first_name || ''} ${rec.last_name || ''}`.trim(), role: 'RECRUITER' }
+    if (objectName === 'students')   return { email: rec.personal_email, name: `${rec.first_name || ''} ${rec.last_name || ''}`.trim(), role: 'STUDENT' }
+    return null
+  }
+
+  const sendInvite = async (rec) => {
+    const info = getInviteInfo(rec)
+    if (!info?.email) return toast.error('No email address on this record')
+    setInviting(true)
+    try {
+      const res = await api.post('/api/v1/tenants/send-invite', {
+        email: info.email,
+        name:  info.name || info.email.split('@')[0],
+        role:  info.role,
+        buId:  rec.bu_id || null,
+      })
+      setInviteUrl(res?.inviteUrl || null)
+      toast.success(`Invite sent to ${info.email}`)
+    } catch (e) {
+      toast.error(e.message || 'Failed to send invite')
+    }
+    setInviting(false)
   }
 
   if (loading) return <Page title="Loading…"><Loading /></Page>
@@ -305,6 +357,35 @@ export function DynamicDetail({ objectName: objectNameProp, basePath }) {
           ) : (
             <>
               <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>← Back</Button>
+              {/* Custom action buttons */}
+              {actions.map(action => {
+                const colorCls = {
+                  blue: 'bg-blue-600 hover:bg-blue-700', green: 'bg-green-600 hover:bg-green-700',
+                  red: 'bg-red-600 hover:bg-red-700', orange: 'bg-orange-500 hover:bg-orange-600',
+                  purple: 'bg-purple-600 hover:bg-purple-700', gray: 'bg-gray-600 hover:bg-gray-700',
+                }[action.button_color] || 'bg-blue-600 hover:bg-blue-700'
+                return (
+                  <button
+                    key={action.id}
+                    onClick={() => action.requires_confirmation ? setConfirmAction(action) : executeAction(action)}
+                    disabled={executingAction === action.id}
+                    className={`px-3 py-1.5 text-[12px] font-semibold text-white rounded-lg transition-colors disabled:opacity-50 ${colorCls}`}
+                  >
+                    {executingAction === action.id ? '…' : action.label}
+                  </button>
+                )
+              })}
+              {/* Invite button — recruiters/students without a user account */}
+              {(objectName === 'recruiters' || objectName === 'students') && !record.user_id && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={inviting}
+                  onClick={() => sendInvite(record)}
+                >
+                  <Mail size={13} /> Invite
+                </Button>
+              )}
               {perms?.canEdit !== false && (
                 <Button size="sm" onClick={startEdit}>Edit</Button>
               )}
@@ -314,6 +395,25 @@ export function DynamicDetail({ objectName: objectNameProp, basePath }) {
       }
     >
       {saveError && <Alert variant="error" className="mb-4">{saveError}</Alert>}
+
+      {/* Invite URL banner — shown after sending invite */}
+      {inviteUrl && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <Mail size={15} className="text-blue-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] font-semibold text-blue-800 mb-0.5">Invite sent — copy the link if email isn't configured</p>
+            <code className="text-[11px] text-blue-700 break-all">{inviteUrl}</code>
+          </div>
+          <button
+            onClick={() => { navigator.clipboard?.writeText(inviteUrl); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000) }}
+            className="shrink-0 p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
+            title="Copy link"
+          >
+            {inviteCopied ? <CheckCheck size={13} /> : <Copy size={13} />}
+          </button>
+          <button onClick={() => setInviteUrl(null)} className="shrink-0 text-blue-400 hover:text-blue-600 text-lg leading-none">×</button>
+        </div>
+      )}
 
       <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
 
@@ -350,6 +450,16 @@ export function DynamicDetail({ objectName: objectNameProp, basePath }) {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => executeAction(confirmAction)}
+        title={confirmAction?.label || 'Confirm'}
+        description={`Are you sure you want to run "${confirmAction?.label}"?`}
+        confirmLabel="Run"
+        loading={!!executingAction}
+      />
     </Page>
   )
 }
