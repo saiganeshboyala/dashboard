@@ -27,8 +27,9 @@ export default function SessionTimeoutModal() {
     clearTimeout(warnTimer.current)
     clearTimeout(logoutTimer.current)
     clearInterval(countdownRef.current)
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    localStorage.removeItem('rp_token')
+    localStorage.removeItem('rp_user')
+    localStorage.removeItem('rp_tenant')
     navigate('/login', { state: { reason: 'session_expired' } })
   }, [navigate])
 
@@ -60,7 +61,7 @@ export default function SessionTimeoutModal() {
   }, [logout])
 
   // Only run if there's a token (user is logged in)
-  const hasToken = !!localStorage.getItem('token')
+  const hasToken = !!localStorage.getItem('rp_token')
 
   useEffect(() => {
     if (!hasToken) return

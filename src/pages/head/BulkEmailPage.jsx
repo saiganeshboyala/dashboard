@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import DOMPurify from 'dompurify'
 import { useToast } from '../../context/ToastContext'
 import { Page, DataTable, Loading, Badge, Button, Input, Select, Modal, Tabs } from '../../components/Shared'
 import api from '../../utils/api'
@@ -304,7 +305,7 @@ function StepCompose({ state, setState, templates, onNext, onBack }) {
             </div>
             <div
               className="p-5 text-sm text-gray-700 leading-relaxed max-h-64 overflow-y-auto"
-              dangerouslySetInnerHTML={{ __html: renderPreview(state.bodyHtml) || '<em style="color:#94a3b8">No body yet</em>' }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderPreview(state.bodyHtml) || '<em style="color:#94a3b8">No body yet</em>') }}
             />
           </div>
         )}
@@ -358,7 +359,7 @@ function StepReview({ state, setState, recipientPreview, onSend, onBack, sending
         </div>
         <div
           className="p-5 text-sm text-gray-700 leading-relaxed max-h-48 overflow-y-auto"
-          dangerouslySetInnerHTML={{ __html: (state.bodyHtml || '').replace(/\n/g, '<br/>') }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize((state.bodyHtml || '').replace(/\n/g, '<br/>')) }}
         />
       </div>
 

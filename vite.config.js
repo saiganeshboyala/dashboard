@@ -4,6 +4,7 @@ export default defineConfig({
   plugins: [react()],
   server: { port: 5173, proxy: { '/api/lms': { target: 'http://localhost:3001', changeOrigin: true },'/api': { target: 'http://localhost:3000', changeOrigin: true } } },
   build: {
+    sourcemap: false, // never expose source in production
     chunkSizeWarningLimit: 600, // recharts bundles d3 internally (~542 kB); expected
     rollupOptions: {
       output: {

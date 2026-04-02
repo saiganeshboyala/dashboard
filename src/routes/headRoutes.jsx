@@ -6,6 +6,8 @@ import RecordDetail from '../components/RecordDetail'
 import SetupLayout from '../pages/head/setup/SetupLayout'
 
 // Pages — lazy loaded for code splitting
+const AIAnalyticsPage     = lazy(() => import('../pages/head/AIAnalyticsPage'))
+const AIChatPage          = lazy(() => import('../pages/head/AIChatPage'))
 const HeadDashboard       = lazy(() => import('../pages/head/Dashboard'))
 const AnalyticsPage       = lazy(() => import('../pages/head/AnalyticsPage'))
 const RuleBuilderPage     = lazy(() => import('../pages/head/RuleBuilderPage'))
@@ -55,6 +57,10 @@ export const HEAD_SECTIONS = [
   { section: 'Overview',   items: [
     { to: '/head',           label: 'Dashboard',  icon: 'dashboard' },
     { to: '/head/analytics', label: 'Analytics',  icon: 'chart' },
+  ]},
+  { section: 'AI & Analytics', items: [
+    { to: '/head/ai-analytics', label: 'AI Analytics', icon: 'chart' },
+    { to: '/head/ai-chat',      label: 'AI Chat',      icon: 'dashboard' },
   ]},
   { section: 'CRM', items: [      // populated dynamically from /api/v1/dynamic/config; these are fallbacks
     { to: '/head/students',    label: 'Students',       icon: 'users' },
@@ -114,6 +120,10 @@ export const HeadRoutes = (
       {/* Overview */}
       <Route path="/head"           element={<HeadDashboard />} />
       <Route path="/head/analytics" element={<AnalyticsPage />} />
+
+      {/* AI & Analytics */}
+      <Route path="/head/ai-analytics" element={<AIAnalyticsPage />} />
+      <Route path="/head/ai-chat"      element={<AIChatPage />} />
 
       {/* CRM — dynamic list + detail */}
       <Route path="/head/students"         element={<DynamicList objectName="students"       basePath="/head/students" />} />

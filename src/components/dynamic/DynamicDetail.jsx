@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import api from '../../utils/api'
 import { get } from '../../utils/api'
+import { getRole } from '../../utils/auth'
+import AIInsightsCard from './AIInsightsCard'
 import { Page } from '../ui/Page'
 import { Button } from '../ui/Button'
 import { Tabs } from '../ui/Tabs'
@@ -395,6 +397,11 @@ export function DynamicDetail({ objectName: objectNameProp, basePath }) {
       }
     >
       {saveError && <Alert variant="error" className="mb-4">{saveError}</Alert>}
+
+      {/* AI Insights — HEAD only, students only */}
+      {getRole() === 'HEAD' && objectName === 'students' && !isNaN(Number(id)) && (
+        <AIInsightsCard studentId={Number(id)} />
+      )}
 
       {/* Invite URL banner — shown after sending invite */}
       {inviteUrl && (

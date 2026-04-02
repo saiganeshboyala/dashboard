@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import DOMPurify from 'dompurify'
 import { Page, DataTable, Badge, Button, Modal, Input, Select, Textarea, ConfirmDialog } from '../../components/Shared'
 import { useToast } from '../../context/ToastContext'
 import { getEmailTemplates, createEmailTemplate, deleteEmailTemplate } from '../../utils/api'
@@ -108,7 +109,7 @@ export default function EmailTemplatesPage() {
           <p className="text-[13px] font-medium text-gray-900">{preview?.subject}</p>
         </div>
         {preview?.bodyHtml ? (
-          <div className="prose prose-sm max-w-none text-[13px]" dangerouslySetInnerHTML={{ __html: preview.bodyHtml }} />
+          <div className="prose prose-sm max-w-none text-[13px]" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview.bodyHtml) }} />
         ) : (
           <p className="text-gray-400 text-[13px] italic">No body content</p>
         )}

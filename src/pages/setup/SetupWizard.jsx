@@ -548,7 +548,7 @@ function StepFields({ modules, onSaved }) {
 
               <div className="flex items-center gap-3 mt-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <Toggle checked={form.required} onChange={(v) => setForm((p) => ({ ...p, required: v })} size="sm" />
+                  <Toggle checked={form.required} onChange={(v) => setForm((p) => ({ ...p, required: v }))} size="sm" />
                   <span className="text-sm text-gray-600">Required field</span>
                 </label>
               </div>
