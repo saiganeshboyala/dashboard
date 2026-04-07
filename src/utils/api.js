@@ -1,4 +1,4 @@
-import { getToken } from './auth'
+import { getToken, getAdminToken, refreshAccessToken } from './auth'
 
 // Global error handler — set by ApiErrorSetup inside ToastProvider.
 // Only fires for mutations (POST, PUT, DELETE), not GET fetches.
@@ -8,13 +8,15 @@ export function setApiErrorHandler(fn) { _errorHandler = fn }
 async function request(path, opts = {}) {
   const method = (opts.method || 'GET').toUpperCase()
   const isMutation = method !== 'GET'
+  const isAdmin = path.startsWith('/api/v1/admin')
+  const token = isAdmin ? getAdminToken() : getToken()
   let res
   try {
     res = await fetch(path, {
       ...opts,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getToken()}`,
+        Authorization: `Bearer ${token}`,
         ...opts.headers,
       },
     })
@@ -25,6 +27,27 @@ async function request(path, opts = {}) {
   }
 
   if (res.status === 401) {
+    if (isAdmin) {
+      localStorage.removeItem('rp_admin_token')
+      localStorage.removeItem('rp_admin')
+      window.location.href = '/admin/login'
+      return null
+    }
+    // Attempt token refresh before logging out
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      // Retry the original request with the new token
+      const retryRes = await fetch(path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}`, ...opts.headers },
+      })
+      if (retryRes.ok) {
+        const retryJson = await retryRes.json()
+        if (retryJson.success !== undefined) return retryJson.data || retryJson
+        return retryJson
+      }
+    }
+    // Refresh failed — force logout
     localStorage.clear()
     window.location.href = '/login'
     return null
@@ -113,6 +136,7 @@ export const assignBUToCluster = (id, d)  => request(`/api/v1/clusters/${id}/ass
 export const getOverview          = ()     => request('/api/v1/analytics/overview')
 export const getBUComparison      = ()     => request('/api/v1/analytics/bu-comparison')
 export const getLeaderboard       = ()     => request('/api/v1/analytics/recruiter-leaderboard')
+export const getPerformanceLeaderboard = (period = 'week') => request(`/api/v1/analytics/performance-leaderboard?period=${period}`)
 export const getPipeline          = ()     => request('/api/v1/analytics/pipeline')
 export const getTechDemand        = ()     => request('/api/v1/analytics/technology-demand')
 export const getSubmissionTrends  = (d=30) => request(`/api/v1/analytics/submission-trends?days=${d}`)

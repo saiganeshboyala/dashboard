@@ -6,6 +6,7 @@ import { DynamicList, DynamicDetail } from '../components/dynamic'
 const StuDashboard   = lazy(() => import('../pages/stu/Dashboard'))
 const StuProfilePage = lazy(() => import('../pages/stu/StuProfilePage'))
 const TrainingPage   = lazy(() => import('../pages/stu/TrainingPage'))
+const StudentJobsPage = lazy(() => import('../pages/stu/StudentJobsPage'))
 
 export const STU_SECTIONS = [
   { section: 'Overview', items: [
@@ -16,6 +17,9 @@ export const STU_SECTIONS = [
     { to: '/stu/submissions',  label: 'My Submissions',  icon: 'file' },
     { to: '/stu/interviews',   label: 'My Interviews',   icon: 'calendar' },
     { to: '/stu/training',     label: 'Training',        icon: 'student' },
+  ]},
+  { section: 'Jobs', items: [
+    { to: '/stu/jobs', label: 'Job Opportunities', icon: 'briefcase' },
   ]},
 ]
 
@@ -35,6 +39,9 @@ export const StuRoutes = (
       <Route path="/stu/submissions/:id" element={<DynamicDetail objectName="submissions" basePath="/stu/submissions" />} />
       <Route path="/stu/interviews"      element={<DynamicList objectName="interviews"    basePath="/stu/interviews" />} />
       <Route path="/stu/interviews/:id"  element={<DynamicDetail objectName="interviews"  basePath="/stu/interviews" />} />
+
+      {/* Jobs */}
+      <Route path="/stu/jobs" element={<StudentJobsPage />} />
 
       {/* Training */}
       <Route path="/stu/training" element={<TrainingPage />} />

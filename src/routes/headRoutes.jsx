@@ -45,6 +45,13 @@ const ChangePasswordPage  = lazy(() => import('../pages/head/ChangePasswordPage'
 const InvitePage          = lazy(() => import('../pages/head/InvitePage'))
 const BulkEmailPage       = lazy(() => import('../pages/head/BulkEmailPage'))
 const CustomizePage       = lazy(() => import('../pages/head/customize/CustomizePage'))
+const JobScraperPage      = lazy(() => import('../pages/head/JobScraperPage'))
+// Scraper pages
+const ScraperDashboard    = lazy(() => import('../pages/scraper/ScraperDashboard'))
+const ScrapedRoles        = lazy(() => import('../pages/scraper/ScrapedRoles'))
+const ScrapeControl       = lazy(() => import('../pages/scraper/ScrapeControl'))
+const ScraperScheduler    = lazy(() => import('../pages/scraper/ScraperScheduler'))
+const CareerPagesPage     = lazy(() => import('../pages/scraper/CareerPages'))
 // Setup pages
 const SetupHomePage       = lazy(() => import('../pages/head/setup/SetupHomePage'))
 const ObjectManagerPage   = lazy(() => import('../pages/head/setup/ObjectManagerPage'))
@@ -87,6 +94,14 @@ export const HEAD_SECTIONS = [
   { section: 'Support',    items: [
     { to: '/head/cases',     label: 'Cases',          icon: 'file' },
     { to: '/head/knowledge', label: 'Knowledge Base', icon: 'student' },
+  ]},
+  { section: 'Job Scraper',  items: [
+    { to: '/head/scraper',              label: 'Dashboard',     icon: 'search' },
+    { to: '/head/scraper/roles',        label: 'Scraped Roles', icon: 'briefcase' },
+    { to: '/head/scraper/scrape',       label: 'Scrape Control',icon: 'trending' },
+    { to: '/head/scraper/scheduler',    label: 'Scheduler',     icon: 'clock' },
+    { to: '/head/scraper/career-pages', label: 'Career Pages',  icon: 'globe' },
+    { to: '/head/job-scraper',          label: 'Legacy View',   icon: 'file' },
   ]},
   { section: 'Tools',      items: [
     { to: '/head/import',          label: 'Import',          icon: 'file' },
@@ -190,6 +205,14 @@ export const HeadRoutes = (
       <Route path="/head/mfa"        element={<MFAPage />} />
       <Route path="/head/settings"   element={<SettingsPage />} />
       <Route path="/head/billing"    element={<BillingPage />} />
+
+      {/* Job Scraper */}
+      <Route path="/head/scraper"              element={<ScraperDashboard />} />
+      <Route path="/head/scraper/roles"        element={<ScrapedRoles />} />
+      <Route path="/head/scraper/scrape"       element={<ScrapeControl />} />
+      <Route path="/head/scraper/scheduler"    element={<ScraperScheduler />} />
+      <Route path="/head/scraper/career-pages" element={<CareerPagesPage />} />
+      <Route path="/head/job-scraper"          element={<JobScraperPage />} />
 
       {/* Legacy record route */}
       <Route path="/head/records/:type/:id" element={<RecordDetail objectType="" basePath="/head" />} />

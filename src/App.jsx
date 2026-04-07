@@ -9,6 +9,7 @@ import LoginPage          from './pages/public/LoginPage'
 import RegisterPage       from './pages/public/RegisterPage'
 import PricingPage        from './pages/public/PricingPage'
 import AccessDeniedPage   from './pages/public/AccessDeniedPage'
+import NotFoundPage       from './pages/public/NotFoundPage'
 import SetPasswordPage    from './pages/public/SetPasswordPage'
 import ChangePasswordPage from './pages/head/ChangePasswordPage'
 
@@ -56,7 +57,7 @@ export default function App() {
           {RecRoutes}
           {StuRoutes}
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
         </AppConfigProvider>
       </ToastProvider>

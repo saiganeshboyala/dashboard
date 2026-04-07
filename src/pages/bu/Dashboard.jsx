@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Page, StatCard, DataTable, Badge, Loading, statusBadgeColor, Button } from '../../components/Shared'
+import { Page, StatCard, DataTable, Badge, Loading, statusBadgeColor, Button, Leaderboard } from '../../components/Shared'
 import { getOverview, getStudents, getSubmissions } from '../../utils/api'
 import { getUser } from '../../utils/auth'
 
@@ -66,6 +66,9 @@ export default function BUDashboard() {
         />
       </div>
 
+      {/* Leaderboard — full width */}
+      <Leaderboard className="mb-6" />
+
       <div className="grid grid-cols-2 gap-6">
         {/* Recent Students */}
         <div>
@@ -97,7 +100,7 @@ export default function BUDashboard() {
               ) : '—' },
             ]}
             rows={students}
-            onRowClick={r => navigate(`/head/records/students/${r.id}`)}
+            onRowClick={r => navigate(`/bu/records/students/${r.id}`)}
             emptyText="No students in this BU yet"
           />
         </div>

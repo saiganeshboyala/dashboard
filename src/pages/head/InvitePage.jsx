@@ -7,6 +7,7 @@ import { Mail, Users, Clock, RefreshCw, Trash2, Copy, CheckCheck } from 'lucide-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const ROLES = [
+  { value: 'HEAD',      label: 'Head (Super Admin)' },
   { value: 'BU_ADMIN',  label: 'BU Admin' },
   { value: 'RECRUITER', label: 'Recruiter' },
   { value: 'STUDENT',   label: 'Student' },

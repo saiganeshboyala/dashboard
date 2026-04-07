@@ -12,7 +12,7 @@ import {
 const STATUS = { IDLE: 'idle', LOADING: 'loading', LOADED: 'loaded', ERROR: 'error' }
 
 function BarChart({ data, labelKey, valueKey, color = 'bg-brand-500', height = 160 }) {
-  if (!data?.length) return <p className="text-gray-300 text-sm py-4">No data</p>
+  if (!data?.length) return <p className="text-gray-400 text-sm py-4">No activity in this period</p>
   const max = Math.max(...data.map(d => d[valueKey] || 0), 1)
   return (
     <div className="flex items-end gap-1" style={{ height }}>
@@ -121,7 +121,7 @@ export default function HeadDashboard() {
       setStats(s)
       setLoading(false)
       const t = await safe(() => getSubmissionTrends(30), 'trends')
-      setTrends(t?.trends || toArray(t, 'trends', 'data'))
+      setTrends(t?.trends || toArray(t, 'trends', 'data') || [])
       const a = await safe(getStudentAging, 'aging')
       setAging(a)
     }
@@ -277,14 +277,14 @@ export default function HeadDashboard() {
                   <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-card">
                     <h3 className="text-sm font-bold text-gray-900 mb-1">Submission Trends</h3>
                     <p className="text-xs text-gray-400 mb-4">Last 30 days</p>
-                    {trends
+                    {trends !== null
                       ? <BarChart data={trends.slice(-30)} labelKey="date" valueKey="submissions" color="bg-brand-400" />
                       : <p className="text-xs text-gray-300">Loading chart...</p>}
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-card">
                     <h3 className="text-sm font-bold text-gray-900 mb-1">Interview Trends</h3>
                     <p className="text-xs text-gray-400 mb-4">Last 30 days</p>
-                    {trends
+                    {trends !== null
                       ? <BarChart data={trends.slice(-30)} labelKey="date" valueKey="interviews" color="bg-warn-400" />
                       : <p className="text-xs text-gray-300">Loading chart...</p>}
                   </div>

@@ -7,6 +7,7 @@ import RecordDetail from '../components/RecordDetail'
 const RecDashboard      = lazy(() => import('../pages/rec/Dashboard'))
 const AddSubmissionPage = lazy(() => import('../pages/rec/AddSubmissionPage'))
 const AddInterviewPage  = lazy(() => import('../pages/rec/AddInterviewPage'))
+const RecruiterJobsPage = lazy(() => import('../pages/rec/RecruiterJobsPage'))
 
 export const REC_SECTIONS = [
   { section: 'Overview', items: [
@@ -16,6 +17,9 @@ export const REC_SECTIONS = [
     { to: '/rec/students',    label: 'My Students', icon: 'users' },
     { to: '/rec/submissions', label: 'Submissions', icon: 'file' },
     { to: '/rec/interviews',  label: 'Interviews',  icon: 'calendar' },
+  ]},
+  { section: 'Jobs', items: [
+    { to: '/rec/jobs', label: 'Job Matches', icon: 'briefcase' },
   ]},
   { section: 'Actions', items: [
     { to: '/rec/submit',        label: 'Add Submission', icon: 'file' },
@@ -27,6 +31,7 @@ export const RecRoutes = (
   <>
     <Route element={<AppLayout sections={REC_SECTIONS} basePath="/rec" allowedRoles={['RECRUITER']} />}>
       <Route path="/rec" element={<RecDashboard />} />
+      <Route path="/rec/jobs" element={<RecruiterJobsPage />} />
 
       {/* CRM lists — backend filters to this recruiter's students automatically */}
       <Route path="/rec/students"        element={<DynamicList objectName="students"    basePath="/rec/students" />} />

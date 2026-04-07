@@ -14,7 +14,7 @@ export default function MFAPage() {
   const [verifyCode, setVerifyCode] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [disableModal, setDisableModal] = useState(false)
-  const [disablePassword, setDisablePassword] = useState('')
+  const [disableCode, setDisableCode] = useState('')
   const [disabling, setDisabling] = useState(false)
 
   const load = async () => {
@@ -53,12 +53,12 @@ export default function MFAPage() {
   }
 
   const handleDisable = async () => {
-    if (!disablePassword) return toast.error('Password required to disable MFA')
+    if (!disableCode || disableCode.length < 6) return toast.error('Enter the 6-digit code from your authenticator app')
     setDisabling(true)
     try {
-      await post('/api/v1/mfa/disable', { password: disablePassword })
+      await post('/api/v1/mfa/disable', { code: disableCode })
       toast.success('MFA disabled')
-      setDisableModal(false); setDisablePassword(''); load()
+      setDisableModal(false); setDisableCode(''); load()
     } catch (e) { toast.error(e.message) }
     setDisabling(false)
   }
@@ -73,7 +73,7 @@ export default function MFAPage() {
 
   if (loading) return <Page title="Security · MFA"><Loading /></Page>
 
-  const mfaEnabled = status?.enabled || status?.is_enabled
+  const mfaEnabled = status?.mfaEnabled || status?.enabled || status?.is_enabled
 
   return (
     <Page title="Multi-Factor Authentication" subtitle="Add an extra layer of security to your account">
@@ -126,10 +126,10 @@ export default function MFAPage() {
           <h3 className="text-[13px] font-bold text-gray-900 mb-3">Active MFA Sessions</h3>
           <DataTable
             columns={[
-              { key: 'device', label: 'Device', render: v => <span className="font-medium">{v || 'Unknown device'}</span> },
-              { key: 'ip_address', label: 'IP', render: v => <span className="font-mono text-[12px]">{v || '—'}</span> },
-              { key: 'created_at', label: 'Signed In', render: v => v ? new Date(v).toLocaleString() : '—' },
-              { key: 'last_used_at', label: 'Last Active', render: v => v ? new Date(v).toLocaleDateString() : '—' },
+              { key: 'loginMethod', label: 'Method', render: v => <span className="font-medium">{v || 'password'}</span> },
+              { key: 'ipAddress', label: 'IP', render: v => <span className="font-mono text-[12px]">{v || '—'}</span> },
+              { key: 'createdAt', label: 'Signed In', render: v => v ? new Date(v).toLocaleString() : '—' },
+              { key: 'userAgent', label: 'Device', render: v => <span className="text-[12px] text-gray-500 truncate max-w-[200px] block">{v || '—'}</span> },
               {
                 key: 'actions', label: '', sortable: false,
                 render: (_, r) => (
@@ -187,18 +187,19 @@ export default function MFAPage() {
       </Modal>
 
       {/* Disable modal */}
-      <Modal open={disableModal} onClose={() => { setDisableModal(false); setDisablePassword('') }} title="Disable MFA">
+      <Modal open={disableModal} onClose={() => { setDisableModal(false); setDisableCode('') }} title="Disable MFA">
         <Alert type="warn" className="mb-4">
           Disabling MFA reduces your account security. Your password alone will protect your account.
         </Alert>
         <Input
-          label="Confirm your password" required type="password"
-          value={disablePassword} onChange={e => setDisablePassword(e.target.value)}
-          placeholder="Enter your current password"
+          label="Authenticator Code" required
+          value={disableCode} onChange={e => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          placeholder="000000" maxLength={6}
+          hint="Enter the 6-digit code from your authenticator app to confirm"
         />
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="secondary" onClick={() => { setDisableModal(false); setDisablePassword('') }}>Cancel</Button>
-          <Button variant="danger" onClick={handleDisable} loading={disabling}>Disable MFA</Button>
+          <Button variant="secondary" onClick={() => { setDisableModal(false); setDisableCode('') }}>Cancel</Button>
+          <Button variant="danger" onClick={handleDisable} loading={disabling} disabled={disableCode.length < 6}>Disable MFA</Button>
         </div>
       </Modal>
     </Page>

@@ -5,6 +5,7 @@ import { DynamicList, DynamicDetail } from '../components/dynamic'
 import RecordDetail from '../components/RecordDetail'
 
 const BUDashboard = lazy(() => import('../pages/bu/Dashboard'))
+const BUJobsPage  = lazy(() => import('../pages/bu/BUJobsPage'))
 
 export const BU_SECTIONS = [
   { section: 'Overview', items: [
@@ -16,12 +17,16 @@ export const BU_SECTIONS = [
     { to: '/bu/interviews',  label: 'Interviews',  icon: 'calendar' },
     { to: '/bu/recruiters',  label: 'Recruiters',  icon: 'recruiter' },
   ]},
+  { section: 'Jobs', items: [
+    { to: '/bu/jobs', label: 'Job Requirements', icon: 'briefcase' },
+  ]},
 ]
 
 export const BURoutes = (
   <>
     <Route element={<AppLayout sections={BU_SECTIONS} basePath="/bu" allowedRoles={['BU_ADMIN']} />}>
       <Route path="/bu" element={<BUDashboard />} />
+      <Route path="/bu/jobs" element={<BUJobsPage />} />
 
       {/* CRM lists — backend filters to this BU automatically */}
       <Route path="/bu/students"        element={<DynamicList objectName="students"    basePath="/bu/students" />} />

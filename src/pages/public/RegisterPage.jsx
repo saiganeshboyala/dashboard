@@ -38,7 +38,7 @@ export default function RegisterPage() {
       const json = await res.json()
       const data = json.success ? json.data : json
       if (data?.token) {
-        saveAuth(data.token, data.user, data.tenant)
+        saveAuth(data.token, data.user, data.tenant, data.refreshToken)
         nav('/head')
       } else {
         setErr(json.error?.message || 'Registration failed')

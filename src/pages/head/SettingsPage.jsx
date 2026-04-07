@@ -153,17 +153,17 @@ export default function SettingsPage() {
                   <h3 className="text-[13px] font-bold">Password Policy</h3>
                   <div className="grid grid-cols-3 gap-4">
                     <Input label="Min Length" type="number" value={policy.min_length ?? 8} onChange={e => setPolicy(p => ({ ...p, min_length: +e.target.value }))} />
-                    <Input label="Expire Days (0=never)" type="number" value={policy.password_expiry_days ?? policy.max_age_days ?? 0} onChange={e => setPolicy(p => ({ ...p, password_expiry_days: +e.target.value }))} />
-                    <Input label="Password History" type="number" value={policy.history_count ?? policy.password_history ?? 0} onChange={e => setPolicy(p => ({ ...p, history_count: +e.target.value }))} />
-                    <Input label="Max Failed Attempts" type="number" value={policy.max_failed_attempts ?? policy.max_login_attempts ?? 5} onChange={e => setPolicy(p => ({ ...p, max_failed_attempts: +e.target.value }))} />
-                    <Input label="Lockout (min)" type="number" value={policy.lockout_duration_mins ?? policy.lockout_duration_minutes ?? 30} onChange={e => setPolicy(p => ({ ...p, lockout_duration_mins: +e.target.value }))} />
+                    <Input label="Expire Days (0=never)" type="number" value={policy.max_age_days ?? 90} onChange={e => setPolicy(p => ({ ...p, max_age_days: +e.target.value }))} />
+                    <Input label="Password History" type="number" value={policy.password_history ?? 3} onChange={e => setPolicy(p => ({ ...p, password_history: +e.target.value }))} />
+                    <Input label="Max Failed Attempts" type="number" value={policy.max_login_attempts ?? 5} onChange={e => setPolicy(p => ({ ...p, max_login_attempts: +e.target.value }))} />
+                    <Input label="Lockout (min)" type="number" value={policy.lockout_duration_minutes ?? 15} onChange={e => setPolicy(p => ({ ...p, lockout_duration_minutes: +e.target.value }))} />
                     <Input label="Session Timeout (min)" type="number" value={policy.session_timeout_minutes ?? 480} onChange={e => setPolicy(p => ({ ...p, session_timeout_minutes: +e.target.value }))} />
                   </div>
                   <div className="flex flex-wrap gap-5">
                     {[
                       ['require_uppercase', 'Require Uppercase'],
                       ['require_lowercase', 'Require Lowercase'],
-                      ['require_numbers',   'Require Numbers'],
+                      ['require_number',    'Require Numbers'],
                       ['require_special',   'Require Special Char'],
                     ].map(([k, label]) => (
                       <label key={k} className="flex items-center gap-2 text-[12px] cursor-pointer">
