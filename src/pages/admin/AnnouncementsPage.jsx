@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { DataTable, Badge, Button, Modal, Input, Select, Textarea } from '../../components/Shared'
 import { useToast } from '../../context/ToastContext'
-import { getAdminAnnouncements, createAnnouncement } from '../../utils/api'
-import { Plus, Megaphone, RefreshCw } from 'lucide-react'
+import { getAdminAnnouncements, createAnnouncement, del } from '../../utils/api'
+import { getAdminToken } from '../../utils/auth'
+import { Plus, Megaphone, RefreshCw, Trash2 } from 'lucide-react'
 
 export default function AnnouncementsPage() {
   const toast = useToast()
@@ -34,11 +35,28 @@ export default function AnnouncementsPage() {
   useEffect(() => { load() }, [])
 
   const handleCreate = async () => {
-    if (!form.title || !form.message) return toast.error('Title and message required')
+    if (!form.title || !form.body) return toast.error('Title and message required')
     setCreating(true)
-    try { await createAnnouncement(form); toast.success('Announcement created'); setShowCreate(false); setForm({}); load() }
-    catch (e) { toast.error(e.message) }
+    try {
+      await createAnnouncement({
+        title: form.title,
+        body: form.body,
+        type: form.type || 'info',
+        target: form.target || 'all',
+        endsAt: form.endsAt || null,
+      })
+      toast.success('Announcement created')
+      setShowCreate(false); setForm({}); load()
+    } catch (e) { toast.error(e.message) }
     setCreating(false)
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await del(`/api/v1/admin/announcements/${id}`)
+      toast.success('Announcement deleted')
+      load()
+    } catch (e) { toast.error(e.message) }
   }
 
   return (
@@ -54,10 +72,15 @@ export default function AnnouncementsPage() {
       <DataTable
         columns={[
           { key: 'title', label: 'Title', render: v => <div className="flex items-center gap-2"><Megaphone size={13} className="text-amber-500" /><span className="font-medium">{v}</span></div> },
-          { key: 'type', label: 'Type', render: v => <Badge color={v === 'critical' ? 'red' : v === 'warning' ? 'amber' : 'blue'}>{v || 'info'}</Badge> },
-          { key: 'is_active', label: 'Active', render: v => <Badge color={v ? 'green' : 'gray'} dot>{v ? 'Active' : 'Inactive'}</Badge> },
-          { key: 'starts_at', label: 'Starts', render: v => v ? new Date(v).toLocaleDateString() : '—' },
-          { key: 'ends_at',   label: 'Ends',   render: v => v ? new Date(v).toLocaleDateString() : 'No end' },
+          { key: 'type', label: 'Type', render: v => <Badge color={v === 'critical' || v === 'error' ? 'red' : v === 'warning' ? 'amber' : v === 'success' ? 'green' : 'blue'}>{v || 'info'}</Badge> },
+          { key: 'isActive', label: 'Active', render: v => <Badge color={v ? 'green' : 'gray'} dot>{v ? 'Active' : 'Inactive'}</Badge> },
+          { key: 'startsAt', label: 'Starts', render: v => v ? new Date(v).toLocaleDateString() : '—' },
+          { key: 'endsAt',   label: 'Ends',   render: v => v ? new Date(v).toLocaleDateString() : 'No end' },
+          { key: 'actions', label: '', sortable: false, render: (_, r) => (
+            <button onClick={(e) => { e.stopPropagation(); handleDelete(r.id) }} className="text-gray-400 hover:text-red-500 transition-colors">
+              <Trash2 size={13} />
+            </button>
+          )},
         ]}
         rows={items}
         loading={loading}
@@ -74,13 +97,10 @@ export default function AnnouncementsPage() {
         <div className="space-y-4">
           <Input label="Title" required value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
           <Select label="Type" value={form.type || 'info'} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-            {['info', 'warning', 'critical', 'maintenance'].map(t => <option key={t}>{t}</option>)}
+            {['info', 'warning', 'error', 'success'].map(t => <option key={t}>{t}</option>)}
           </Select>
-          <Textarea label="Message" required value={form.message || ''} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} />
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Start Date" type="datetime-local" value={form.startsAt || ''} onChange={e => setForm(f => ({ ...f, startsAt: e.target.value }))} />
-            <Input label="End Date" type="datetime-local" value={form.endsAt || ''} onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))} />
-          </div>
+          <Textarea label="Message" required value={form.body || ''} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={3} />
+          <Input label="End Date" type="datetime-local" value={form.endsAt || ''} onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))} />
         </div>
       </Modal>
     </div>

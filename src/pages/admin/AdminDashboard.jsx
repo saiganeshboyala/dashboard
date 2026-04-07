@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { StatCard, Loading, DataTable, Badge } from '../../components/Shared'
-import { getAdminDashboard } from '../../utils/api'
-import { getHealth } from '../../utils/api'
+import { getAdminDashboard, getHealth } from '../../utils/api'
 
 export default function AdminDashboard() {
   const [data, setData] = useState(null)
@@ -15,6 +14,23 @@ export default function AdminDashboard() {
   if (loading) return <Loading />
   if (!data) return <p className="text-gray-400 text-[13px] p-6">Failed to load dashboard</p>
 
+  const s = data.stats || data || {}
+  const totalTenants  = s.totalTenants  ?? s.total_tenants  ?? 0
+  const activeTenants = s.activeTenants ?? s.active_tenants ?? 0
+  const totalUsers    = s.totalUsers    ?? s.total_users    ?? 0
+  const mrr           = s.mrr ?? 0
+  const mrrDisplay    = s.mrrDisplay || `$${(mrr / 100).toLocaleString()}`
+
+  const recentTenants = (data.recentTenants || []).map(t => ({
+    ...t,
+    name: t.name,
+    plan: t.plan,
+    userCount: t.userCount ?? t.users ?? t.user_count ?? 0,
+    createdAt: t.createdAt ?? t.created_at,
+  }))
+
+  const planBreakdown = data.planBreakdown || []
+
   return (
     <div className="space-y-6">
       <div>
@@ -27,14 +43,29 @@ export default function AdminDashboard() {
       )}
       <h2 className="text-[15px] font-bold text-gray-900 mb-4">Platform Overview</h2>
         <div className="grid grid-cols-4 gap-4">
-          <StatCard label="Total Tenants"    value={data.totalTenants}    icon="building"  color="brand" />
-          <StatCard label="Active Tenants"   value={data.activeTenants}   icon="chart"     color="success" />
-          <StatCard label="Total Users"      value={data.totalUsers}      icon="users"     color="purple" />
-          <StatCard label="MRR"              value={`$${(data.mrr || 0).toLocaleString()}`} icon="trending" color="warn" />
+          <StatCard label="Total Tenants"    value={totalTenants}    icon="building"  color="brand" />
+          <StatCard label="Active Tenants"   value={activeTenants}   icon="chart"     color="success" />
+          <StatCard label="Total Users"      value={totalUsers}      icon="users"     color="purple" />
+          <StatCard label="MRR"              value={mrrDisplay}      icon="trending"  color="warn" />
         </div>
       </div>
 
-      {data.recentTenants?.length > 0 && (
+      {/* Plan breakdown */}
+      {planBreakdown.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-card p-5">
+          <h3 className="text-[13px] font-bold text-gray-700 mb-3">Plan Breakdown</h3>
+          <div className="flex gap-4">
+            {planBreakdown.map(p => (
+              <div key={p.plan} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                <Badge color="blue">{p.plan}</Badge>
+                <span className="text-[13px] font-bold tabular-nums">{p.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {recentTenants.length > 0 && (
         <div>
           <h3 className="text-[13px] font-bold text-gray-700 mb-3">Recent Signups</h3>
           <DataTable
@@ -45,7 +76,7 @@ export default function AdminDashboard() {
               { key: 'userCount', label: 'Users' },
               { key: 'createdAt', label: 'Joined', render: v => v ? new Date(v).toLocaleDateString() : '—' },
             ]}
-            rows={data.recentTenants} emptyText="No recent tenants"
+            rows={recentTenants} emptyText="No recent tenants"
           />
         </div>
       )}

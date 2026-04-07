@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { DataTable, Badge, Button, Modal, Input } from '../../components/Shared'
 import { useToast } from '../../context/ToastContext'
-import { getRateLimits, updateRateLimit } from '../../utils/api'
+import { getRateLimits, put } from '../../utils/api'
 import { RefreshCw, Edit2 } from 'lucide-react'
 
 export default function RateLimitsPage() {
@@ -16,7 +16,7 @@ export default function RateLimitsPage() {
     setLoading(true)
     try {
       const data = await getRateLimits()
-      setLimits(Array.isArray(data) ? data : data?.rateLimits || data?.data || [])
+      setLimits(Array.isArray(data) ? data : data?.limits || data?.rateLimits || data?.data || [])
     } catch (e) { toast.error(e.message) }
     setLoading(false)
   }
@@ -26,7 +26,12 @@ export default function RateLimitsPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updateRateLimit(editing.id, form)
+      const tenantId = editing.tenant_id || editing.tenantId
+      await put(`/api/v1/admin/rate-limits/${tenantId}`, {
+        requestsPerMinute: form.requests_per_minute,
+        requestsPerHour: form.requests_per_hour,
+        requestsPerDay: form.requests_per_day,
+      })
       toast.success('Rate limit updated')
       setEditing(null); setForm({}); load()
     } catch (e) { toast.error(e.message) }
@@ -40,8 +45,8 @@ export default function RateLimitsPage() {
       </div>
       <DataTable
         columns={[
-          { key: 'endpoint', label: 'Endpoint', render: v => <span className="font-mono text-[12px]">{v}</span> },
-          { key: 'plan', label: 'Plan', render: v => <Badge color="blue">{v}</Badge> },
+          { key: 'tenant_name', label: 'Tenant', render: v => <span className="font-medium">{v || 'Default'}</span> },
+          { key: 'tenant_id', label: 'Tenant ID', render: v => <span className="font-mono text-[11px] text-gray-400">{v}</span> },
           { key: 'requests_per_minute', label: 'Req/min', render: v => <span className="tabular-nums font-medium">{v}</span> },
           { key: 'requests_per_hour', label: 'Req/hr', render: v => <span className="tabular-nums">{v}</span> },
           { key: 'requests_per_day', label: 'Req/day', render: v => <span className="tabular-nums">{v}</span> },
@@ -64,7 +69,9 @@ export default function RateLimitsPage() {
           </div>
         }>
         <div className="space-y-3">
-          <p className="text-[12px] text-gray-500 font-mono bg-gray-50 p-2 rounded">{editing?.endpoint}</p>
+          <p className="text-[12px] text-gray-500 font-medium bg-gray-50 p-2 rounded">
+            {editing?.tenant_name || 'Tenant'} (ID: {editing?.tenant_id || editing?.tenantId})
+          </p>
           <Input label="Requests per Minute" type="number" value={form.requests_per_minute || ''} onChange={e => setForm(f => ({ ...f, requests_per_minute: +e.target.value }))} />
           <Input label="Requests per Hour" type="number" value={form.requests_per_hour || ''} onChange={e => setForm(f => ({ ...f, requests_per_hour: +e.target.value }))} />
           <Input label="Requests per Day" type="number" value={form.requests_per_day || ''} onChange={e => setForm(f => ({ ...f, requests_per_day: +e.target.value }))} />

@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { saveAdminAuth } from '../../utils/auth'
-import { Shield, AlertCircle } from 'lucide-react'
-import { useToast } from '../../context/ToastContext'
+import { adminLogin } from '../../utils/api'
+import { Shield, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 export default function AdminLogin() {
   const nav = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -15,18 +16,18 @@ export default function AdminLogin() {
     e.preventDefault()
     setBusy(true); setErr('')
     try {
-      const res = await fetch('/api/v1/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const json = await res.json()
-      const data = json.success ? json.data : json
-      if (data?.token) {
-        saveAdminAuth(data.token, data.admin || {})
+      const data = await adminLogin({ email, password })
+      const token = data?.token
+      const admin = data?.admin || {}
+      if (token) {
+        saveAdminAuth(token, admin)
         nav('/admin')
-      } else setErr(json.error?.message || 'Invalid credentials')
-    } catch { setErr('Connection error') }
+      } else {
+        setErr(data?.error?.message || data?.error || data?.message || 'Invalid credentials')
+      }
+    } catch (e) {
+      setErr(e?.message || 'Connection error')
+    }
     setBusy(false)
   }
 
@@ -49,13 +50,18 @@ export default function AdminLogin() {
           )}
           <div>
             <label className="block text-[11px] font-medium text-gray-400 mb-1.5">Admin Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus
               className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[13px] text-white outline-none focus:border-red-500/50 transition-all" />
           </div>
           <div>
             <label className="block text-[11px] font-medium text-gray-400 mb-1.5">Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[13px] text-white outline-none focus:border-red-500/50 transition-all" />
+            <div className="relative">
+              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required
+                className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[13px] text-white outline-none focus:border-red-500/50 transition-all pr-10" />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           </div>
           <button type="submit" disabled={busy}
             className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-semibold rounded-lg transition-all disabled:opacity-60">

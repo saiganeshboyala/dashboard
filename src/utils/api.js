@@ -390,8 +390,8 @@ export const getImportJob      = (id)     => request(`/api/v1/import/jobs/${id}`
 
 // Admin extras
 export const upgradeTenant     = (id, d)  => request(`/api/v1/admin/tenants/${id}/upgrade`, { method: 'POST', body: JSON.stringify(d) })
-export const wipeTenantData    = (id)     => request(`/api/v1/admin/tenants/${id}/data`, { method: 'DELETE' })
-export const enableFlagForTenant=(flag,d) => request(`/api/v1/admin/feature-flags/tenant`, { method: 'POST', body: JSON.stringify({flag, ...d}) })
+export const wipeTenantData    = (id)     => request(`/api/v1/admin/tenants/${id}/data`, { method: 'DELETE', body: JSON.stringify({ confirm: 'DELETE_ALL_DATA' }) })
+export const enableFlagForTenant=(flagName, d) => request(`/api/v1/admin/feature-flags/tenant`, { method: 'POST', body: JSON.stringify({ flagName, ...d }) })
 
 // Activities completion
 export const completeActivityById = (id)  => request(`/api/v1/activities/${id}/complete`, { method: 'PUT' })
